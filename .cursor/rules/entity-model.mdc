@@ -1,0 +1,75 @@
+---
+description: Entity Framework model template and patterns for VerdaVidaLawnCare
+globs: "**/Models/*.cs, **/Entities/*.cs"
+alwaysApply: false
+---
+
+# Entity Model Template
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace VerdaVidaLawnCare.CoreApi.Models
+{
+    /// <summary>
+    /// Represents a [EntityDescription]
+    /// </summary>
+    [Table("[TableName]")]
+    public class [EntityName]
+    {
+        /// <summary>
+        /// Gets or sets the unique identifier
+        /// </summary>
+        [Key]
+        public int Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the [PropertyDescription]
+        /// </summary>
+        [Required]
+        [StringLength([MaxLength])]
+        public string [PropertyName] { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the date and time when the record was created
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Gets or sets the date and time when the record was last updated
+        /// </summary>
+        public DateTime? UpdatedAt { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the record is active
+        /// </summary>
+        public bool IsActive { get; set; } = true;
+
+        // Navigation properties
+        // Add navigation properties for related entities here
+        // Example:
+        // public virtual ICollection<RelatedEntity> RelatedEntities { get; set; } = new List<RelatedEntity>();
+    }
+}
+```
+
+## Usage Instructions
+1. Replace `[EntityName]` with the actual entity name
+2. Replace `[TableName]` with the database table name
+3. Replace `[EntityDescription]` with a description of what the entity represents
+4. Replace `[PropertyName]` with the actual property name
+5. Replace `[PropertyDescription]` with a description of the property
+6. Replace `[MaxLength]` with the appropriate maximum length
+7. Add additional properties as needed
+8. Add navigation properties for related entities
+9. Consider adding validation attributes as appropriate
+10. Always default to Postgres standards
+
+## Common Validation Attributes
+- `[Required]` - Field is required
+- `[StringLength(max)]` - Maximum string length
+- `[Range(min, max)]` - Numeric range validation
+- `[EmailAddress]` - Email format validation
+- `[Phone]` - Phone number format validation
+- `[RegularExpression(pattern)]` - Custom regex validation

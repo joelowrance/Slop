@@ -1,0 +1,38 @@
+---
+description: Clean architecture guidelines and design patterns for VerdaVidaLawnCare
+globs: "**/*.cs"
+alwaysApply: true
+---
+
+# Architecture Guidelines
+
+## Project Structure
+```
+VerdaVidaLawnCare/
+├── src/
+│   ├── VerdaVidaLawnCare.CoreAPI/          # Web API project
+│   ├── VerdaVidaLawnCare.Communications/   # Web API project
+│   ├── VerdaVidaLawnCare.Equipment/        # Web API project
+│   └── VerdaVidaLawnCare.Web/              # Frontend web application
+│   └── VerdaVidaLawnCare.Shared/           # Frontend web application
+├── tests/
+│   ├── VerdaVidaLawnCare.UnitTests/        # Unit tests
+│   └── VerdaVidaLawnCare.IntegrationTests/ # Integration tests
+└── docs/                                   # Documentation
+```
+
+## Design Patterns
+- **Repository Pattern**: For data access abstraction
+- **Unit of Work**: For managing database transactions
+- **Dependency Injection**: For loose coupling
+- **CQRS**: For separating read and write operations (if needed)
+- **Mediator Pattern**: For handling commands and queries
+- **Vertical Slices**: For feature implmentations
+
+## Layer Responsibilities
+- **CoreAPI**: Primary business logic backend.
+- **Communications**: Used for sending emails, texts, documents, etc
+- **Equipment**: Business logic for maintaining inventory, scheduling, servicing of equipment
+- **Web**: Primary user interface
+- **Shared**: Common/reusable functionaluty
+
