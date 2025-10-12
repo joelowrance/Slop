@@ -1,5 +1,5 @@
 ---
-description: Error handling patterns and Result<T> implementation for VerdaVidaLawnCare
+description: Error handling patterns and Result implementation for VerdaVidaLawnCare
 globs: "**/*.cs"
 alwaysApply: true
 ---
@@ -7,19 +7,22 @@ alwaysApply: true
 # Error Handling Rules
 
 ## Core Principles
+
 - NEVER catch generic exceptions (catch (Exception ex))
-- Always use Result<T> pattern for business logic operations
+- Always use Result pattern for business logic operations
 - Use ProblemDetails middleware for Web API error responses
 - Log all exceptions using Serilog with structured logging
 - Include tenant context in all log entries
 - Use specific exception types for different error scenarios
 
 ## AI Assistance
-- Automatically suggest Result<T> wrappers for business logic methods
+
+- Automatically suggest Result wrappers for business logic methods
 - Generate try-catch blocks with specific exception types for infrastructure code
 - Be very proactive about warning about potential issues before they happen
 
 ## Result Pattern Implementation
+
 ```csharp
 public class Result<T>
 {
@@ -40,6 +43,7 @@ public class Result<T>
 ```
 
 ## Exception Handling Patterns
+
 ```csharp
 // Good: Specific exception handling
 try
@@ -66,6 +70,7 @@ catch (Exception ex) // DON'T DO THIS
 ```
 
 ## Logging Pattern
+
 ```csharp
 _logger.LogInformation("Processing service request {RequestId} for tenant {TenantId}", 
     request.Id, _tenantContext.TenantId);

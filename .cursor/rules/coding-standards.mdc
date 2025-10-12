@@ -1,18 +1,21 @@
 ---
 alwaysApply: true
 ---
+
 # Coding Standards
 
 ## C# Guidelines
+
 - Use PascalCase for public members, classes, methods, and properties
 - Use camelCase for private fields and local variables
 - Use descriptive names that clearly indicate purpose
 - Prefer explicit types over `var` when the type is not obvious
 - Use `async`/`await` for asynchronous operations
 - Implement `IDisposable` for classes that manage resources
-- ALWAYS follow .editorcongif
+- ALWAYS follow .editorconfig
 
 ## Database Guidelines
+
 - Use Entity Framework Core conventions
 - Name tables in PascalCase (singular)
 - Use meaningful column names
@@ -23,15 +26,17 @@ alwaysApply: true
 - Always use Postgres conventions
 
 ## API Guidelines
+
 - Follow RESTful conventions
 - Use appropriate HTTP status codes
 - Include proper error handling and validation
 - Document API endpoints with XML comments
 - Use DTOs for data transfer
 - Use ProblemDetails to surface any errors.
-- Follow the Result<T> pattern when returning data.
+- Follow the Result pattern when returning data.
 
 ## Frontend Guidelines
+
 - Use semantic HTML
 - Follow responsive design principles
 - Use CSS Grid or Flexbox for layouts
