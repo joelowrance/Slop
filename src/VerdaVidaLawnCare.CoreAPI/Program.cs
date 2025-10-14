@@ -1,5 +1,9 @@
 using System.Diagnostics;
 using MassTransit;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using System.Reflection;
+using VerdaVida.Shared.EndPoints;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using VerdaVida.Shared.ProjectSetup;
@@ -21,6 +25,13 @@ builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
+
+// FluentValidation registration
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+// Minimal endpoints discovery
+builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
 
 // Configure Entity Framework with PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -76,6 +87,9 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthorization();
+
+// Map discovered endpoints
+app.MapEndpoints();
 
 // Add health check endpoints
 app.MapHealthChecks("/health");

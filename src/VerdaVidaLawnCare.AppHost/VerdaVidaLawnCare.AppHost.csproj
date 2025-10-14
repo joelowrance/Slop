@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VerdaVida.Shared\VerdaVida.Shared.csproj" />
+    <ProjectReference Include="..\VerdaVida.Shared\VerdaVida.Shared.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\VerdaVidaLawnCare.CoreAPI\VerdaVidaLawnCare.CoreAPI.csproj" />
   </ItemGroup>
 
