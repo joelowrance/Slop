@@ -1,8 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
 using VerdaVida.Shared.Common;
 using VerdaVida.Shared.EndPoints;
-using VerdaVida.Shared.Exceptions;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
 
@@ -13,22 +12,18 @@ namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates;
 /// </summary>
 public class CreateEstimateEndpoint : IEndpoint
 {
-    private readonly IEstimateService _estimateService;
-    private readonly ILogger<CreateEstimateEndpoint> _logger;
-
-    public CreateEstimateEndpoint(IEstimateService estimateService, ILogger<CreateEstimateEndpoint> logger)
-    {
-        _estimateService = estimateService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Maps the estimate creation endpoint
     /// </summary>
     /// <param name="app">The endpoint route builder</param>
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/estimates", CreateEstimateAsync)
+        app.MapPost("/api/estimates", async (IMediator m, CreateEstimateRequest request) =>
+            {
+                var result = await m.Send(new SubmitEstimateCommand(request));
+                 return result;
+                //return await m.Send(new SubmitEstimateCommand(request));
+            })
             .WithName("CreateEstimate")
             .WithSummary("Create a new estimate")
             .WithDescription("Creates a new estimate with customer information and line items. If the customer doesn't exist, they will be created automatically.")
@@ -38,17 +33,26 @@ public class CreateEstimateEndpoint : IEndpoint
             .Produces<ValidationProblemDetails>(400)
             .Produces<ProblemDetails>(500);
     }
+}
 
-    /// <summary>
-    /// Creates a new estimate
-    /// </summary>
-    /// <param name="request">The estimate creation request</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The created estimate details</returns>
-    private async Task<IResult> CreateEstimateAsync(
-        [FromBody] CreateEstimateRequest request,
-        CancellationToken cancellationToken = default)
+
+public record SubmitEstimateCommand(CreateEstimateRequest Request) : IRequest<IResult>;
+
+public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateCommand, IResult>
+{
+    ILogger<SubmitEstimateCommandHandler> _logger;
+    IEstimateService _estimateService;
+
+    public SubmitEstimateCommandHandler(ILogger<SubmitEstimateCommandHandler> logger, IEstimateService estimateService)
     {
+        _logger = logger;
+        _estimateService = estimateService;
+    }
+
+    public async Task<IResult> Handle(SubmitEstimateCommand command, CancellationToken cancellationToken)
+    {
+        var request = command.Request;
+
         try
         {
             _logger.LogInformation("Received request to create estimate for customer {CustomerEmail}",

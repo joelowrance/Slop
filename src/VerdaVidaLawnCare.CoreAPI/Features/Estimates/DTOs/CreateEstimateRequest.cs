@@ -1,3 +1,5 @@
+using MediatR;
+
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 
 /// <summary>
@@ -71,3 +73,4 @@ public class CustomerInfoDto
     /// </summary>
     public string PostalCode { get; set; } = string.Empty;
 }
+
