@@ -162,11 +162,7 @@ public class ApplicationDbContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    // Only set column type if not already explicitly configured
-                    if (property.GetColumnType() == null)
-                    {
-                        property.SetColumnType("timestamp");
-                    }
+                    property.SetColumnType("timestamp");
                 }
             }
         }

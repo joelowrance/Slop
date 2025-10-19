@@ -23,12 +23,12 @@ public class EstimateResponse
     /// <summary>
     /// Gets or sets the estimate date
     /// </summary>
-    public DateTime EstimateDate { get; set; }
+    public DateTimeOffset EstimateDate { get; set; }
 
     /// <summary>
     /// Gets or sets the expiration date
     /// </summary>
-    public DateTime ExpirationDate { get; set; }
+    public DateTimeOffset ExpirationDate { get; set; }
 
     /// <summary>
     /// Gets or sets the status of the estimate

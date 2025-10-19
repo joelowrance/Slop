@@ -41,12 +41,12 @@ public class Estimate : IAuditable
     /// <summary>
     /// Gets or sets the date the estimate was created
     /// </summary>
-    public DateTime EstimateDate { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset EstimateDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Gets or sets the expiration date of the estimate
     /// </summary>
-    public DateTime ExpirationDate { get; set; }
+    public DateTimeOffset ExpirationDate { get; set; }
 
     /// <summary>
     /// Gets or sets the status of the estimate
