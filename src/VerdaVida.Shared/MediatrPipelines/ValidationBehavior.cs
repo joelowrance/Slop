@@ -1,10 +1,8 @@
 ﻿using FluentValidation;
-
-using LawnCare.Shared.OpenTelemetry;
-
 using MediatR;
+using VerdaVida.Shared.OpenTelemetry;
 
-namespace LawnCare.Shared.Pipelines;
+namespace VerdaVida.Shared.MediatrPipelines;
 
 public record ValidationError(string PropertyName, string ErrorMessage);
 

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace LawnCare.Shared.OpenTelemetry;
+namespace VerdaVida.Shared.OpenTelemetry;
 
 public class QueryHandlerMetrics : IDisposable
 {

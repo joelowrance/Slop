@@ -1,12 +1,9 @@
 ﻿using System.Reflection;
-
-using LawnCare.Shared.OpenTelemetry;
-
 using MediatR;
-
 using Microsoft.Extensions.Logging;
+using VerdaVida.Shared.OpenTelemetry;
 
-namespace LawnCare.Shared.Pipelines;
+namespace VerdaVida.Shared.MediatrPipelines;
 
 public class HandlerBehavior<TRequest, TResponse>(
 	IRequestHandler<TRequest, TResponse> outerHandler,
@@ -50,7 +47,7 @@ public class HandlerBehavior<TRequest, TResponse>(
         }
         finally
         {
-            if (isCommand) 
+            if (isCommand)
             {
                 commandMetrics.CommandHandlingEnd(handlerName, startingTimestamp);
             }

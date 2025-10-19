@@ -5,7 +5,7 @@
     <AspireVersion>9.5.1</AspireVersion>
     <OpenTelemetryVersion>1.12.0</OpenTelemetryVersion>
     <EfVersion>9.0.9</EfVersion>
-    <MassTransitVersion>8.5.1</MassTransitVersion>
+    <MassTransitVersion>8.5.4</MassTransitVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="FluentValidation" Version="12.0.0" />
@@ -13,7 +13,7 @@
     <PackageVersion Include="MediatR" Version="13.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
-    <PackageVersion Include="MassTransit" Version="8.5.1" />
+    <PackageVersion Include="MassTransit" Version="$(MassTransitVersion)" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="$(MassTransitVersion)" />
     <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="$(MassTransitVersion)" />
   </ItemGroup>

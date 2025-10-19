@@ -6,11 +6,78 @@ using System.Reflection;
 using VerdaVida.Shared.EndPoints;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using VerdaVida.Shared.EntityFrameworkExtensions;
+using VerdaVida.Shared.MediatrPipelines;
+using VerdaVida.Shared.OpenTelemetry;
 using VerdaVida.Shared.ProjectSetup;
 using VerdaVidaLawnCare.CoreAPI.Data;
+using VerdaVidaLawnCare.CoreAPI.Features.Estimates;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+builder.Services.AddCors();
+builder.Services.AddEndpoints(typeof(Program).Assembly);
+builder.Services.AddOpenApi();
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(HandlerBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
+// FluentValidation registration
+//builder.Services.AddFluentValidationAutoValidation();
+//builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+builder.Services.AddProblemDetails();
+
+// Only configure MassTransit when running in Aspire (when RabbitMQ connection string is available)
+if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("rabbitmq")))
+{
+    builder.Services.AddMassTransit(x =>
+    {
+        //x.AddConsumer<MoveJobToPendingCommandConsumer>(typeof(MoveJobToPendingCommandConsumerDefinition));
+        x.SetKebabCaseEndpointNameFormatter();
+        x.UsingRabbitMq((context, configuration) =>
+        {
+            configuration.Host(builder.Configuration.GetConnectionString("rabbitmq"));
+            configuration.ConfigureEndpoints(context);
+        });
+    });
+}
+// Register MassTransit.Mediator, good luck not confusing this with the other one
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddConsumers(typeof(Program).Assembly);
+});
+
+// Minimal endpoints discovery
+builder.Services.AddTransient<IEstimateService, EstimateService>();
+builder.Services.AddSingleton<IActivityScope, ActivityScope>();
+builder.Services.AddSingleton<CommandHandlerMetrics>();
+builder.Services.AddSingleton<QueryHandlerMetrics>();
+
+// DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        var connectionString = builder.Configuration.GetConnectionString("verdevida-connection");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            // When running outside of Aspire, use a default connection string for development
+            connectionString = "Host=localhost;Port=50274;Database=LawnCare;Username=sqluser;Password=sqlpass";
+        }
+
+        options.UseNpgsql(connectionString)
+            .UseSnakeCaseNamingConvention();
+    });
+
+// Only add migration when running in Aspire (when connection string is available)
+if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("job-connection")))
+{
+    builder.Services.AddMigration<ApplicationDbContext>();
+}
+
+
+
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -26,40 +93,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 
-// FluentValidation registration
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
-// Minimal endpoints discovery
-builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
-
-// Configure Entity Framework with PostgreSQL
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("verdevida-connection");
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        // When running outside of Aspire, use a default connection string for development
-        connectionString = "Host=localhost;Port=50274;Database=LawnCare;Username=sqluser;Password=sqlpass";
-    }
-
-    options.UseNpgsql(connectionString)
-        .UseSnakeCaseNamingConvention();
-});
-
-
-// Configure MassTransit with RabbitMQ
-builder.Services.AddMassTransit(x =>
-{
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        cfg.Host(builder.Configuration.GetConnectionString("RabbitMQ"));
-        cfg.ConfigureEndpoints(context);
-    });
-});
-
-// Add ProblemDetails
-builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -139,12 +173,14 @@ app.MapGet("/api/test", async (ApplicationDbContext dbContext, ILogger<Program> 
 .WithName("TestEndpoint")
 .WithOpenApi();
 
-// Ensure database is created
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await context.Database.EnsureCreatedAsync();
-}
+// Ensure database is migrated to the latest version
+// using (var scope = app.Services.CreateScope())
+// {
+//     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//     await context.Database.MigrateAsync();
+// }
+
+
 
 app.Run();
 
