@@ -15,9 +15,14 @@ public class Customer : IAuditable
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer's full name
+    /// Gets or sets the customer's first name
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the customer's last name
+    /// </summary>
+    public string LastName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the customer's email address
@@ -79,9 +84,13 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         builder.HasKey(c => c.Id);
 
-        builder.Property(c => c.Name)
+        builder.Property(c => c.FirstName)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(100);
+
+        builder.Property(c => c.LastName)
+            .IsRequired()
+            .HasMaxLength(100);
 
         builder.Property(c => c.Email)
             .IsRequired()

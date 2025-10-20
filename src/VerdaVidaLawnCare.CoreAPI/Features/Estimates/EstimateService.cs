@@ -90,7 +90,7 @@ public class EstimateService : IEstimateService
 
                 await transaction.CommitAsync();
 
-                _logger.LogInformation("Successfully created estimate {EstimateNumber} with {LineItemCount} line items", 
+                _logger.LogInformation("Successfully created estimate {EstimateNumber} with {LineItemCount} line items",
                     estimateNumber, lineItems.Count);
 
                 // Return the created estimate
@@ -110,7 +110,7 @@ public class EstimateService : IEstimateService
         }
         catch (ValidationException ex)
         {
-            _logger.LogWarning(ex, "Validation error while creating estimate for customer {CustomerEmail}: {Error}", 
+            _logger.LogWarning(ex, "Validation error while creating estimate for customer {CustomerEmail}: {Error}",
                 request.Customer.Email, ex.Message);
             return Result<EstimateResponse>.Failure(ex.Message);
         }
@@ -134,7 +134,7 @@ public class EstimateService : IEstimateService
 
             if (existingCustomer != null)
             {
-                _logger.LogInformation("Found existing customer {CustomerId} for email {Email}", 
+                _logger.LogInformation("Found existing customer {CustomerId} for email {Email}",
                     existingCustomer.Id, customerInfo.Email);
                 return existingCustomer;
             }
@@ -142,7 +142,8 @@ public class EstimateService : IEstimateService
             // Create new customer
             var newCustomer = new Customer
             {
-                Name = customerInfo.Name,
+                FirstName = customerInfo.FirstName,
+                LastName = customerInfo.LastName,
                 Email = customerInfo.Email,
                 Phone = customerInfo.Phone,
                 Address = customerInfo.Address,
@@ -157,7 +158,7 @@ public class EstimateService : IEstimateService
             _context.Customers.Add(newCustomer);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Created new customer {CustomerId} for email {Email}", 
+            _logger.LogInformation("Created new customer {CustomerId} for email {Email}",
                 newCustomer.Id, customerInfo.Email);
 
             return newCustomer;
@@ -176,7 +177,7 @@ public class EstimateService : IEstimateService
     {
         var today = DateTime.UtcNow;
         var datePrefix = today.ToString("yyyyMMdd");
-        
+
         // Find the highest sequence number for today
         var existingEstimates = await _context.Estimates
             .Where(e => e.EstimateNumber.StartsWith($"EST-{datePrefix}-"))
@@ -225,7 +226,8 @@ public class EstimateService : IEstimateService
                 Customer = new CustomerDto
                 {
                     Id = estimate.Customer.Id,
-                    Name = estimate.Customer.Name,
+                    FirstName = estimate.Customer.FirstName,
+                    LastName= estimate.Customer.LastName,
                     Email = estimate.Customer.Email,
                     Phone = estimate.Customer.Phone,
                     FullAddress = $"{estimate.Customer.Address}, {estimate.Customer.City}, {estimate.Customer.State} {estimate.Customer.PostalCode}",

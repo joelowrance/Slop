@@ -10,11 +10,17 @@ public class CustomerInfoDtoValidator : AbstractValidator<CustomerInfoDto>
 {
     public CustomerInfoDtoValidator()
     {
-        RuleFor(x => x.Name)
+        RuleFor(x => x.FirstName)
             .NotEmpty()
-            .WithMessage("Customer name is required")
-            .MaximumLength(200)
-            .WithMessage("Name cannot exceed 200 characters");
+            .WithMessage("Customer first name is required")
+            .MaximumLength(100)
+            .WithMessage("First name cannot exceed 200 characters");
+
+        RuleFor(x => x.LastName)
+            .NotEmpty()
+            .WithMessage("Customer last name is required")
+            .MaximumLength(100)
+            .WithMessage("Last name cannot exceed 200 characters");
 
         RuleFor(x => x.Email)
             .NotEmpty()

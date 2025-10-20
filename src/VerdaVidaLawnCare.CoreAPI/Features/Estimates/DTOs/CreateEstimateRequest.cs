@@ -39,9 +39,14 @@ public class CreateEstimateRequest
 public class CustomerInfoDto
 {
     /// <summary>
-    /// Gets or sets the customer's full name
+    /// Gets or sets the customer's first name
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the customer's last name
+    /// </summary>
+    public string LastName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the customer's email address

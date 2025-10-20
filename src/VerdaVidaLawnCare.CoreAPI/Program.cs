@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using MassTransit;
 using FluentValidation;
-using FluentValidation.AspNetCore;
-using System.Reflection;
 using VerdaVida.Shared.EndPoints;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -71,9 +69,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     });
 
 // Only add migration when running in Aspire (when connection string is available)
-if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("job-connection")))
+if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("verdevida-connection")))
 {
-    builder.Services.AddMigration<ApplicationDbContext>();
+    builder.Services.AddMigration<ApplicationDbContext, ApplicationDbContextSeeder>();
 }
 
 
