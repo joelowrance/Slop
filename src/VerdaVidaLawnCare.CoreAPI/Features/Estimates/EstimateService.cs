@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 using VerdaVida.Shared.Common;
-using VerdaVida.Shared.Exceptions;
+using VerdaVida.Shared.Events;
 using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 using VerdaVidaLawnCare.CoreAPI.Models;
+using MassTransit;
 
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates;
 
@@ -15,11 +15,13 @@ public class EstimateService : IEstimateService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<EstimateService> _logger;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public EstimateService(ApplicationDbContext context, ILogger<EstimateService> logger)
+    public EstimateService(ApplicationDbContext context, ILogger<EstimateService> logger, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _logger = logger;
+        _publishEndpoint = publishEndpoint;
     }
 
     /// <summary>
@@ -160,6 +162,25 @@ public class EstimateService : IEstimateService
 
             _logger.LogInformation("Created new customer {CustomerId} for email {Email}",
                 newCustomer.Id, customerInfo.Email);
+
+            // Publish customer created event
+            try
+            {
+                var customerCreatedEvent = new CustomerCreatedEvent
+                {
+                    CustomerId = newCustomer.Id,
+                    Email = newCustomer.Email,
+                    CreatedAt = newCustomer.CreatedAt
+                };
+
+                await _publishEndpoint.Publish(customerCreatedEvent);
+                _logger.LogInformation("Published CustomerCreatedEvent for customer {CustomerId}", newCustomer.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the customer creation
+                _logger.LogWarning(ex, "Failed to publish CustomerCreatedEvent for customer {CustomerId}", newCustomer.Id);
+            }
 
             return newCustomer;
         }

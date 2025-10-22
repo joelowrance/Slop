@@ -122,6 +122,7 @@ app.UseAuthorization();
 
 // Map discovered endpoints
 app.MapEndpoints();
+app.MapPrometheusScrapingEndpoint();
 
 // Add health check endpoints
 app.MapHealthChecks("/health");
