@@ -1,3 +1,6 @@
+using VerdaVidaLawnCare.AppHost.AspireIntegrations;
+using VerdaVidaLawnCare.AppHost.AspireIntegrations.OpenTelemetryCollector;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var rabbitUser = builder.AddParameter("mquser", "guest");
@@ -17,6 +20,15 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPass, 5672)
     .WithDataBindMount(@"c:\temp\VerdaViva\RabbitMQ")
     .WithManagementPlugin(port: 15762);
 
+
+var prometheus = builder.AddPrometheus("prometheus", 9090);
+var grafana = builder.AddGrafana("grafana", 3000).WithReference(prometheus.Resource).WaitFor(prometheus);
+
+
+
+builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml")
+    .WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
+
 // MailHog SMTP Server for email testing
 // var mailhog = builder.AddContainer("mailhog", "mailhog/mailhog")
 //     .WithHttpEndpoint(8025, 8025, name: "mailhog-ui")
@@ -32,5 +44,9 @@ builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WaitFor(rabbitmq)
     .WaitFor(coreApiDatabase)
     .WithReference(coreApiDatabase);
+
+builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
+    .WithReference(rabbitmq)
+    .WaitFor(rabbitmq);
 
 builder.Build().Run();

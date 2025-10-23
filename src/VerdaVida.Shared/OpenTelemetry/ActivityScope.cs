@@ -121,7 +121,7 @@ public record StartActivityOptions
 }
 public static class ActivitySourceProvider
 {
-    public const string DefaultSourceName = "coffeeshop";
+    public const string DefaultSourceName = "VerdaVida";
     public static readonly ActivitySource Instance = new(DefaultSourceName, "v1");
 
     public static ActivityListener AddDummyListener(
@@ -138,5 +138,22 @@ public static class ActivitySourceProvider
         ActivitySource.AddActivityListener(listener);
 
         return listener;
+    }
+}
+
+public static class ActivityExtensions
+{
+    // See https://opentelemetry.io/docs/specs/otel/trace/semantic_conventions/exceptions/
+    public static void SetExceptionTags(this Activity activity, Exception ex)
+    {
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.AddTag("exception.message", ex.Message);
+        activity.AddTag("exception.stacktrace", ex.ToString());
+        activity.AddTag("exception.type", ex.GetType().FullName);
+        activity.SetStatus(ActivityStatusCode.Error);
     }
 }

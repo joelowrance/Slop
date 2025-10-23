@@ -15,10 +15,12 @@
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.1" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.5.1" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="9.5.1" />
+    <PackageReference Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.13.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VerdaVida.Shared\VerdaVida.Shared.csproj" />
+    <ProjectReference Include="..\VerdaVida.Shared\VerdaVida.Shared.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\VerdaVidaLawnCare.Communications\VerdaVidaLawnCare.Communications.csproj" />
     <ProjectReference Include="..\VerdaVidaLawnCare.CoreAPI\VerdaVidaLawnCare.CoreAPI.csproj" />
   </ItemGroup>
 

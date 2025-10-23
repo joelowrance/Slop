@@ -65,14 +65,15 @@ namespace VerdaVida.Shared.ProjectSetup;
 
 			builder.Services.AddOpenTelemetry()
 				.WithMetrics(metrics =>
-				{
-					metrics.AddAspNetCoreInstrumentation()
-						.AddHttpClientInstrumentation()
-						.AddRuntimeInstrumentation()
-						.AddMeter(InstrumentationOptions.MeterName)
-						//.AddMeter("Marten")
-						.AddMeter(ActivitySourceProvider.DefaultSourceName);
-				})
+                {
+                    metrics.AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddRuntimeInstrumentation()
+                        .AddPrometheusExporter()
+                        .AddMeter(InstrumentationOptions.MeterName)
+                        .AddMeter(ActivitySourceProvider.DefaultSourceName)
+                        .AddMeter("Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Server.Kestrel");
+                })
 				.WithTracing(tracing =>
                 {
                     tracing.AddAspNetCoreInstrumentation()

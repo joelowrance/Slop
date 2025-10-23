@@ -1,0 +1,146 @@
+### Test Customer Creation Event System
+### This file tests the RabbitMQ event system by creating estimates with new customers
+
+@baseUrl = http://localhost:5000
+@contentType = application/json
+
+### Test 1: Create estimate with new customer (should trigger event)
+POST {{baseUrl}}/api/estimates
+Content-Type: {{contentType}}
+
+{
+  "customer": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "555-0123",
+    "address": "123 Main Street",
+    "city": "Anytown",
+    "state": "CA",
+    "postalCode": "12345"
+  },
+  "expirationDate": "2025-12-31T23:59:59Z",
+  "notes": "Test estimate for new customer",
+  "terms": "Payment due within 30 days",
+  "lineItems": [
+    {
+      "serviceId": 1,
+      "equipmentId": 1,
+      "description": "Weekly lawn mowing service",
+      "quantity": 4,
+      "unitPrice": 50.00,
+      "lineTotal": 200
+    },
+    {
+      "serviceId": 2,
+      "equipmentId": 2,
+      "description": "Hedge trimming",
+      "quantity": 1,
+      "unitPrice": 75.00,
+      "lineTotal": 75
+    }
+  ]
+}
+
+### Test 2: Create estimate with same customer (should NOT trigger event)
+POST {{baseUrl}}/api/estimates
+Content-Type: {{contentType}}
+
+{
+  "customer": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "555-0123",
+    "address": "123 Main Street",
+    "city": "Anytown",
+    "state": "CA",
+    "postalCode": "12345"
+  },
+  "expirationDate": "2024-12-31T23:59:59Z",
+  "notes": "Second estimate for existing customer",
+  "terms": "Payment due within 30 days",
+  "lineItems": [
+    {
+      "serviceId": 1,
+      "equipmentId": 1,
+      "description": "Monthly lawn maintenance",
+      "quantity": 1,
+      "unitPrice": 200.00
+    }
+  ]
+}
+
+### Test 3: Create estimate with different new customer (should trigger event)
+POST {{baseUrl}}/api/estimates
+Content-Type: {{contentType}}
+
+{
+  "customer": {
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane.smith@example.com",
+    "phone": "555-0456",
+    "address": "456 Oak Avenue",
+    "city": "Springfield",
+    "state": "IL",
+    "postalCode": "62701"
+  },
+  "expirationDate": "2024-12-31T23:59:59Z",
+  "notes": "Test estimate for another new customer",
+  "terms": "Payment due within 30 days",
+  "lineItems": [
+    {
+      "serviceId": 1,
+      "equipmentId": 1,
+      "description": "Bi-weekly lawn care",
+      "quantity": 2,
+      "unitPrice": 60.00
+    }
+  ]
+}
+
+### Test 4: Create estimate with third new customer (should trigger event)
+POST {{baseUrl}}/api/estimates
+Content-Type: {{contentType}}
+
+{
+  "customer": {
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "email": "bob.johnson@example.com",
+    "phone": "555-0789",
+    "address": "789 Pine Street",
+    "city": "Riverside",
+    "state": "TX",
+    "postalCode": "75001"
+  },
+  "expirationDate": "2024-12-31T23:59:59Z",
+  "notes": "Test estimate for third new customer",
+  "terms": "Payment due within 30 days",
+  "lineItems": [
+    {
+      "serviceId": 1,
+      "equipmentId": 1,
+      "description": "One-time lawn cleanup",
+      "quantity": 1,
+      "unitPrice": 150.00
+    },
+    {
+      "serviceId": 2,
+      "equipmentId": 2,
+      "description": "Tree pruning",
+      "quantity": 2,
+      "unitPrice": 100.00
+    }
+  ]
+}
+
+### Test 5: Test CoreAPI health endpoint
+GET {{baseUrl}}/health
+
+### Test 6: Test Communications service health endpoint
+GET https://localhost:7001/health
+
+### Test 7: Test Communications service test endpoint
+GET https://localhost:7001/api/test
