@@ -55,10 +55,8 @@ public static class GrafanaResourceResourceBuilderExtensions
             .WithImageRegistry(GrafanaResourceContainerImageTags.Registry)
             .WithBindMount("../grafana/config", "/etc/grafana", isReadOnly: true)
             .WithBindMount("../grafana/dashboards", "/var/lib/grafana/dashboards", isReadOnly: true)
-            .WithArgs("--web.enable-otlp-receiver", "--config.file=/etc/prometheus/prometheus.yml")
             .WithHttpEndpoint(
                 targetPort: 3000,
-                port: httpPort,
                 name: PrometheusResource.HttpEndpointName);
 
     }
@@ -69,7 +67,11 @@ public static class GrafanaResourceResourceBuilderExtensions
     {
         return builder.WithEnvironment(context =>
         {
-            var prometheusEndpoint = $"{prometheus.HttpReference}/api/v1/oltp";
+            var prometheusEndpoint = ReferenceExpression.Create(
+                $"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}"
+            );
+
+            //var prometheusEndpoint = $"{prometheus.HttpReference}/api/v1/oltp";
             context.EnvironmentVariables["PROMETHEUS_ENDPOINT"] = prometheusEndpoint;
         });
     }

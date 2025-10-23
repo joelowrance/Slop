@@ -22,12 +22,20 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPass, 5672)
 
 
 var prometheus = builder.AddPrometheus("prometheus", 9090);
-var grafana = builder.AddGrafana("grafana", 3000).WithReference(prometheus.Resource).WaitFor(prometheus);
 
+var grafana = builder.AddGrafana("grafana", 3000)
+    .WithReference(prometheus.Resource)
+    .WaitFor(prometheus);
 
+var test2 =
+    ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp");
+
+//var test = prometheus.GetEndpoint("http");
 
 builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml")
-    .WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
+    .WithEnvironment("PROMETHEUS_ENDPOINT",
+        ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp"));
+    //.WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
 
 // MailHog SMTP Server for email testing
 // var mailhog = builder.AddContainer("mailhog", "mailhog/mailhog")
@@ -43,10 +51,14 @@ builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq)
     .WaitFor(coreApiDatabase)
-    .WithReference(coreApiDatabase);
+    .WithReference(coreApiDatabase)
+    .WaitFor(grafana)
+    .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
 
 builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithReference(rabbitmq)
-    .WaitFor(rabbitmq);
+    .WaitFor(rabbitmq)
+    .WaitFor(grafana)
+    .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
 
 builder.Build().Run();

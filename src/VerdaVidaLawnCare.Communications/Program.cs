@@ -74,6 +74,7 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 {
     Predicate = _ => false
 });
+app.MapPrometheusScrapingEndpoint();
 
 // Add test endpoint
 app.MapGet("/api/test", (ILogger<Program> logger) =>

@@ -58,7 +58,7 @@ public static class PrometheusResourceBuilderExtensions
             .WithArgs("--web.enable-otlp-receiver", "--config.file=/etc/prometheus/prometheus.yml")
             .WithHttpEndpoint(
                 targetPort: 9090,
-                port: httpPort,
+                //port: httpPort,
                 name: PrometheusResource.HttpEndpointName);
 
     }
