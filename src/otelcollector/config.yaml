@@ -23,13 +23,17 @@ exporters:
     endpoint: ${env:PROMETHEUS_ENDPOINT}
     tls:
         insecure: true
+  otlphttp/jaeger:
+    endpoint: ${env:JAEGER_ENDPOINT}
+    tls:
+      insecure: true
   
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/aspire]
+      exporters: [otlp/aspire, otlphttp/jaeger]
     logs:
       receivers: [otlp]
       processors: [batch]

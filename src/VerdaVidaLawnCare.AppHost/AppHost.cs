@@ -27,6 +27,8 @@ var grafana = builder.AddGrafana("grafana", 3000)
     .WithReference(prometheus.Resource)
     .WaitFor(prometheus);
 
+var jaeger = builder.AddJaeger("jaeger", 16686);
+
 var test2 =
     ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp");
 
@@ -34,7 +36,9 @@ var test2 =
 
 builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml")
     .WithEnvironment("PROMETHEUS_ENDPOINT",
-        ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp"));
+        ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp"))
+    .WithEnvironment("JAEGER_ENDPOINT",
+        ReferenceExpression.Create($"{jaeger.GetEndpoint("otlp-http").Property(EndpointProperty.Url)}"));
     //.WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
 
 // MailHog SMTP Server for email testing
@@ -53,12 +57,14 @@ builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WaitFor(coreApiDatabase)
     .WithReference(coreApiDatabase)
     .WaitFor(grafana)
+    .WaitFor(jaeger)
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
 
 builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq)
     .WaitFor(grafana)
+    .WaitFor(jaeger)
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
 
 builder.Build().Run();

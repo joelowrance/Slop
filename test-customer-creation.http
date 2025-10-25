@@ -10,10 +10,10 @@ Content-Type: {{contentType}}
 
 {
   "customer": {
-    "firstName": "John",
-    "lastName": "Doe",
-    "email": "john.doe@example.com",
-    "phone": "555-0123",
+    "firstName": "Jehnny",
+    "lastName": "Dooey",
+    "email": "kenny@example.com",
+    "phone": "555-1123",
     "address": "123 Main Street",
     "city": "Anytown",
     "state": "CA",
@@ -48,9 +48,9 @@ Content-Type: {{contentType}}
 
 {
   "customer": {
-    "firstName": "John",
+    "firstName": "Johnny",
     "lastName": "Doe",
-    "email": "john.doe@example.com",
+    "email": "john.doey@example.com",
     "phone": "555-0123",
     "address": "123 Main Street",
     "city": "Anytown",
