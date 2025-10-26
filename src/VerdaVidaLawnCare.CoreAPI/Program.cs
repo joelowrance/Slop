@@ -13,7 +13,19 @@ using VerdaVidaLawnCare.CoreAPI.Features.Estimates;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
-builder.Services.AddCors();
+
+// Configure CORS for React app
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
 builder.Services.AddEndpoints(typeof(Program).Assembly);
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(cfg =>
@@ -103,6 +115,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseRouting();
 
 // Add correlation ID middleware

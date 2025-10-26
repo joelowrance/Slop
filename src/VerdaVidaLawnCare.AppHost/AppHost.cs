@@ -51,7 +51,7 @@ builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml
 var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 
 // Add service projects
-builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
+var coreapi = builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq)
     .WaitFor(coreApiDatabase)
@@ -66,5 +66,10 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WaitFor(grafana)
     .WaitFor(jaeger)
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
+
+// Add React frontend
+//var web = builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
+  //  .WithHttpEndpoint(port: 5173, name: "http")
+    //.WithReference(coreapi);
 
 builder.Build().Run();

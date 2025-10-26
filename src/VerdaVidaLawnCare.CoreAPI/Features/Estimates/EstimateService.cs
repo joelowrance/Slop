@@ -56,7 +56,7 @@ public class EstimateService : IEstimateService
                     EstimateNumber = estimateNumber,
                     CustomerId = customer.Id,
                     EstimateDate = DateTime.UtcNow,
-                    ExpirationDate = request.ExpirationDate ?? DateTime.UtcNow.AddDays(30),
+                    ExpirationDate = request.ExpirationDate?.ToUniversalTime() ?? DateTime.UtcNow.AddDays(30),
                     Status = EstimateStatus.Draft,
                     Notes = request.Notes,
                     Terms = request.Terms,
