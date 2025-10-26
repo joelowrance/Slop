@@ -62,6 +62,7 @@ builder.Services.AddMediator(cfg =>
 
 // Minimal endpoints discovery
 builder.Services.AddTransient<IEstimateService, EstimateService>();
+builder.Services.AddTransient<CustomerDataSeeder>();
 builder.Services.AddSingleton<IActivityScope, ActivityScope>();
 builder.Services.AddSingleton<CommandHandlerMetrics>();
 builder.Services.AddSingleton<QueryHandlerMetrics>();

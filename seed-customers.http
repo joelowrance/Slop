@@ -1,0 +1,16 @@
+### Seed 1000 Customers (Default)
+POST https://localhost:7000/api/customers/seed
+Content-Type: application/json
+
+### Seed 1000 Customers (Default, non https)
+POST http://localhost:5000/api/customers/seed
+Content-Type: application/json
+
+### Seed 500 Customers
+POST https://localhost:7000/api/customers/seed?count=500
+Content-Type: application/json
+
+### Seed 100 Customers
+POST https://localhost:7000/api/customers/seed?count=100
+Content-Type: application/json
+

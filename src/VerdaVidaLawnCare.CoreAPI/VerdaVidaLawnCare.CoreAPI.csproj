@@ -21,6 +21,7 @@
     <PackageReference Include="FluentValidation.AspNetCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Bogus" />
   </ItemGroup>
 
   <ItemGroup>
