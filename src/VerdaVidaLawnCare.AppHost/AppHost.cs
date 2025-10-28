@@ -7,10 +7,7 @@ var rabbitUser = builder.AddParameter("mquser", "guest");
 var rabbitPass = builder.AddParameter("mqpassword", "guest");
 var postgresUser = builder.AddParameter("postgresUser", "postgres");
 var postgresPass = builder.AddParameter("postgresPass", "postgres");
-var webPort = builder.AddParameter("webPort", "5173");
-
-// Parse the web port for use in WithHttpEndpoint
-var webPortInt = int.TryParse(builder.Configuration["Parameters:webPort"] ?? "5173", out var port) ? port : 5173;
+var webPort = builder.AddParameter("webPort", "80");
 
 // PostgreSQL Database
 var postgres = builder.AddPostgres("postgres", postgresUser, postgresPass, port: 5432)
