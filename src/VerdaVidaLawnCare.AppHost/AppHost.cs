@@ -7,6 +7,10 @@ var rabbitUser = builder.AddParameter("mquser", "guest");
 var rabbitPass = builder.AddParameter("mqpassword", "guest");
 var postgresUser = builder.AddParameter("postgresUser", "postgres");
 var postgresPass = builder.AddParameter("postgresPass", "postgres");
+var webPort = builder.AddParameter("webPort", "5173");
+
+// Parse the web port for use in WithHttpEndpoint
+var webPortInt = int.TryParse(builder.Configuration["Parameters:webPort"] ?? "5173", out var port) ? port : 5173;
 
 // PostgreSQL Database
 var postgres = builder.AddPostgres("postgres", postgresUser, postgresPass, port: 5432)
@@ -41,7 +45,7 @@ builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml
         ReferenceExpression.Create($"{jaeger.GetEndpoint("otlp-http").Property(EndpointProperty.Url)}"))
     .WithEnvironment("NEWRELIC_ENDPOINT", "https://otlp.nr-data.net")
     .WithEnvironment("NEWRELIC_API_KEY", "939d15c405f33e29f1cba797e6e74819FFFFNRAL");
-    //.WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
+
 
 // MailHog SMTP Server for email testing
 // var mailhog = builder.AddContainer("mailhog", "mailhog/mailhog")
@@ -67,11 +71,16 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WaitFor(rabbitmq)
     .WaitFor(grafana)
     .WaitFor(jaeger)
-    .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
+    .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
+    .PublishAsDockerFile();
 
 // Add React frontend
-//var web = builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
-  //  .WithHttpEndpoint(port: 5173, name: "http")
-    //.WithReference(coreapi);
+builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
+    .WithReference(coreapi)
+    .WithEnvironment("BROWSER", "none")
+    .WithEnvironment("VITE_PORT", webPort)
+    .WithExternalHttpEndpoints()
+    .PublishAsDockerFile();
+
 
 builder.Build().Run();
