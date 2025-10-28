@@ -38,7 +38,9 @@ builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml
     .WithEnvironment("PROMETHEUS_ENDPOINT",
         ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp"))
     .WithEnvironment("JAEGER_ENDPOINT",
-        ReferenceExpression.Create($"{jaeger.GetEndpoint("otlp-http").Property(EndpointProperty.Url)}"));
+        ReferenceExpression.Create($"{jaeger.GetEndpoint("otlp-http").Property(EndpointProperty.Url)}"))
+    .WithEnvironment("NEWRELIC_ENDPOINT", "https://otlp.nr-data.net")
+    .WithEnvironment("NEWRELIC_API_KEY", "939d15c405f33e29f1cba797e6e74819FFFFNRAL");
     //.WithEnvironment("PROMETHEUS_ENDPOINT", $"{prometheus.GetEndpoint("http")}/api/v1/otlp");
 
 // MailHog SMTP Server for email testing

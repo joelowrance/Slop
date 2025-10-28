@@ -27,20 +27,27 @@ exporters:
     endpoint: ${env:JAEGER_ENDPOINT}
     tls:
       insecure: true
+  otlphttp/newrelic:
+    endpoint: ${env:NEWRELIC_ENDPOINT}
+    headers:
+      api-key: ${env:NEWRELIC_API_KEY}
+    tls:
+      insecure: false
   
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/aspire, otlphttp/jaeger]
+      exporters: [otlp/aspire, otlphttp/jaeger, otlphttp/newrelic]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/aspire]
+      exporters: [otlp/aspire, otlphttp/newrelic]
     metrics:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlp/aspire
         - otlphttp/prometheus
+        - otlphttp/newrelic
