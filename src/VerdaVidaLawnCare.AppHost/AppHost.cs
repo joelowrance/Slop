@@ -71,6 +71,22 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
     .PublishAsDockerFile();
 
+// add a python project
+
+#pragma warning disable ASPIREHOSTINGPYTHON001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+builder.AddDockerfile("pytest", "../PythonTest", "Dockerfile")
+    .WithHttpEndpoint(port: 8080, targetPort: 80)
+    .WithExternalHttpEndpoints();
+
+// builder.AddPythonApp("python", "../PythonTest", "app.py");
+// var pythonapp = builder.AddPythonApp("instrumented-python-app", "../InstrumentedPythonProject", "app.py")
+//     .WithHttpEndpoint(env: "PORT")
+//     .WithEnvironment("DEBUG", "True")
+//     .WithEnvironment("VIRTUAL_ENV", "AspireTestApp")
+//     .WithExternalHttpEndpoints();
+#pragma warning restore ASPIREHOSTINGPYTHON001
+
+
 // Add React frontend
 builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
     .WithReference(coreapi)
@@ -78,6 +94,8 @@ builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
     .WithEnvironment("VITE_PORT", webPort)
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
+
+
 
 
 builder.Build().Run();
