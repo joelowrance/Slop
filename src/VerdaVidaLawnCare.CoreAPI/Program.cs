@@ -10,19 +10,48 @@ using VerdaVida.Shared.OpenTelemetry;
 using VerdaVida.Shared.ProjectSetup;
 using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates;
+using VerdaVidaLawnCare.CoreAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// Configure HttpClient for Python API service
+builder.Services.AddHttpClient<IPythonApiService, PythonApiService>((serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    
+    // When using .WithReference(pythonApi.GetEndpoint("http")) in AppHost,
+    // Aspire injects the endpoint URL into configuration.
+    // The configuration is accessible via the endpoint reference.
+    // Try multiple possible configuration key patterns that Aspire might use:
+    var endpointUrl = configuration["Services__pytest__http__0"] 
+                   ?? configuration["Services__pytest__http"] 
+                   ?? configuration.GetConnectionString("pytest")
+                   ?? configuration["ConnectionStrings:pytest"];
+    
+    if (!string.IsNullOrEmpty(endpointUrl))
+    {
+        // Use the URL from configuration (supports both http:// and https://)
+        client.BaseAddress = new Uri(endpointUrl);
+    }
+    else
+    {
+        // Fallback: Use service discovery by service name
+        // The AddServiceDiscovery() call in AddServiceDefaults() will resolve "pytest"
+        // at runtime. This approach supports HTTP by default.
+        // For HTTPS, the endpoint URL should be injected via .WithReference()
+        client.BaseAddress = new Uri("http://pytest");
+    }
+});
 
 // Configure CORS for React app
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.AllowAnyOrigin()
             .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
+            .AllowAnyHeader();
     });
 });
 
@@ -63,6 +92,8 @@ builder.Services.AddMediator(cfg =>
 // Minimal endpoints discovery
 builder.Services.AddTransient<IEstimateService, EstimateService>();
 builder.Services.AddTransient<CustomerDataSeeder>();
+
+// Python API service is registered via AddHttpClient above
 builder.Services.AddSingleton<IActivityScope, ActivityScope>();
 builder.Services.AddSingleton<CommandHandlerMetrics>();
 builder.Services.AddSingleton<QueryHandlerMetrics>();
@@ -183,6 +214,53 @@ app.MapGet("/api/test", async (ApplicationDbContext dbContext, ILogger<Program> 
     }
 })
 .WithName("TestEndpoint")
+.WithOpenApi();
+
+// Add Python API test endpoint
+app.MapGet("/api/python-test", async (IPythonApiService pythonApiService, ILogger<Program> logger) =>
+{
+    using var activity = TestActivitySource.ActivitySource.StartActivity();
+    activity?.SetTag("operation", "python-test");
+
+    logger.LogInformation("Python API test endpoint called at {Timestamp}", DateTime.UtcNow);
+
+    try
+    {
+        var helloResult = await pythonApiService.GetHelloAsync();
+        var pythonVersionResult = await pythonApiService.GetPythonVersionAsync();
+
+        var result = new
+        {
+            Message = "Python API integration is working!",
+            Timestamp = DateTime.UtcNow,
+            PythonApiHello = helloResult,
+            PythonVersion = pythonVersionResult,
+            Service = "VerdaVidaLawnCare.CoreAPI",
+            Version = "1.0.0"
+        };
+
+        logger.LogInformation("Python API test endpoint completed successfully");
+
+        return Results.Ok(result);
+    }
+    catch (HttpRequestException ex)
+    {
+        logger.LogError(ex, "HTTP error calling Python API");
+        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        return Results.Problem(
+            detail: "Failed to connect to Python API",
+            statusCode: 503,
+            title: "Service Unavailable"
+        );
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error in Python API test endpoint");
+        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        return Results.Problem("Internal server error occurred during Python API test");
+    }
+})
+.WithName("PythonApiTestEndpoint")
 .WithOpenApi();
 
 // Ensure database is migrated to the latest version

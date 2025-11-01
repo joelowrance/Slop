@@ -4,6 +4,7 @@ using VerdaVida.Shared.Common;
 using VerdaVida.Shared.EndPoints;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
+using VerdaVidaLawnCare.CoreAPI.Services;
 
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates;
 
@@ -40,13 +41,18 @@ public record SubmitEstimateCommand(CreateEstimateRequest Request) : IRequest<IR
 
 public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateCommand, IResult>
 {
-    ILogger<SubmitEstimateCommandHandler> _logger;
-    IEstimateService _estimateService;
+    private readonly ILogger<SubmitEstimateCommandHandler> _logger;
+    private readonly IEstimateService _estimateService;
+    private readonly IPythonApiService _pythonApiService;
 
-    public SubmitEstimateCommandHandler(ILogger<SubmitEstimateCommandHandler> logger, IEstimateService estimateService)
+    public SubmitEstimateCommandHandler(
+        ILogger<SubmitEstimateCommandHandler> logger,
+        IEstimateService estimateService,
+        IPythonApiService pythonApiService)
     {
         _logger = logger;
         _estimateService = estimateService;
+        _pythonApiService = pythonApiService;
     }
 
     public async Task<IResult> Handle(SubmitEstimateCommand command, CancellationToken cancellationToken)
@@ -69,6 +75,9 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
             // Create the estimate
             var result = await _estimateService.CreateEstimateAsync(request);
 
+            // Call python api
+            var pyVersion = await _pythonApiService.GetPythonVersionAsync(cancellationToken);
+
             if (!result.IsSuccess)
             {
                 _logger.LogWarning("Failed to create estimate: {Error}", result.Error);
@@ -85,7 +94,11 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
             // Return 201 Created with location header
             return Results.CreatedAtRoute(
                 "GetEstimate",
-                new { id = result.Value.Id },
+                new
+                {
+                    id = result.Value.Id,
+                    version = pyVersion
+                },
                 result.Value);
         }
         catch (ValidationException ex)

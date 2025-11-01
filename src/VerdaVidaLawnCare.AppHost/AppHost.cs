@@ -53,6 +53,13 @@ builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml
 
 var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 
+// add a python project
+#pragma warning disable ASPIREHOSTINGPYTHON001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+var pythonApi = builder.AddDockerfile("pytest", "../PythonTest", "Dockerfile")
+    .WithHttpEndpoint(port: 8080, targetPort: 80)
+    .WithExternalHttpEndpoints();
+#pragma warning restore ASPIREHOSTINGPYTHON001
+
 // Add service projects
 var coreapi = builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WithReference(rabbitmq)
@@ -61,7 +68,8 @@ var coreapi = builder.AddProject<Projects.VerdaVidaLawnCare_CoreAPI>("coreapi")
     .WithReference(coreApiDatabase)
     .WaitFor(grafana)
     .WaitFor(jaeger)
-    .WithEnvironment("PROMETHEUS_ENDPOINT", test2);
+    .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
+    .WithReference(pythonApi.GetEndpoint("http"));
 
 builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithReference(rabbitmq)
@@ -71,21 +79,12 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
     .PublishAsDockerFile();
 
-// add a python project
-
-#pragma warning disable ASPIREHOSTINGPYTHON001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-builder.AddDockerfile("pytest", "../PythonTest", "Dockerfile")
-    .WithHttpEndpoint(port: 8080, targetPort: 80)
-    .WithExternalHttpEndpoints();
-
 // builder.AddPythonApp("python", "../PythonTest", "app.py");
 // var pythonapp = builder.AddPythonApp("instrumented-python-app", "../InstrumentedPythonProject", "app.py")
 //     .WithHttpEndpoint(env: "PORT")
 //     .WithEnvironment("DEBUG", "True")
 //     .WithEnvironment("VIRTUAL_ENV", "AspireTestApp")
 //     .WithExternalHttpEndpoints();
-#pragma warning restore ASPIREHOSTINGPYTHON001
-
 
 // Add React frontend
 builder.AddNpmApp("web", "../VerdaVidaLawnCare.Web")
