@@ -14,7 +14,12 @@ const validationSchema = Yup.object({
     firstName: Yup.string().required('First name is required'),
     lastName: Yup.string().required('Last name is required'),
     email: Yup.string().email('Invalid email').required('Email is required'),
-    phone: Yup.string().required('Phone is required'),
+    phone: Yup.string()
+      .required('Phone is required')
+      .matches(
+        /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4}$/,
+        'Please enter a valid phone number (e.g., (123) 456-7890, 123-456-7890, or 1234567890)'
+      ),
     address: Yup.string().required('Address is required'),
     city: Yup.string().required('City is required'),
     state: Yup.string().required('State is required'),
@@ -24,7 +29,7 @@ const validationSchema = Yup.object({
     .of(
       Yup.object({
         description: Yup.string().required('Description is required'),
-        quantity: Yup.number().positive('Must be positive').required('Required'),
+        quantity: Yup.number().integer('Must be a whole number').positive('Must be positive').required('Required'),
         unitPrice: Yup.number().positive('Must be positive').required('Required'),
       })
     )
@@ -218,7 +223,7 @@ export function EstimateForm() {
                                     name={`lineItems.${index}.quantity`} 
                                     type="number" 
                                     min="0" 
-                                    step="0.01"
+                                    step="1"
                                     as={Input}
                                   />
                                   <ErrorMessage 
