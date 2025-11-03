@@ -129,6 +129,9 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         // Create index on phone for faster lookups
         builder.HasIndex(c => c.Phone);
 
+        // Create index on address for faster search lookups
+        builder.HasIndex(c => c.Address);
+
         // Configure relationship with Estimates
         builder.HasMany(c => c.Estimates)
             .WithOne(e => e.Customer)
