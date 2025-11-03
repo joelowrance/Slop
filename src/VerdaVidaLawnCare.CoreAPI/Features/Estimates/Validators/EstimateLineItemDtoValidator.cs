@@ -1,4 +1,6 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
@@ -8,7 +10,7 @@ namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
 /// </summary>
 public class EstimateLineItemDtoValidator : AbstractValidator<EstimateLineItemDto>
 {
-    public EstimateLineItemDtoValidator()
+    public EstimateLineItemDtoValidator(ApplicationDbContext context)
     {
         RuleFor(x => x.Description)
             .NotEmpty()
@@ -27,6 +29,19 @@ public class EstimateLineItemDtoValidator : AbstractValidator<EstimateLineItemDt
         RuleFor(x => x.LineTotal)
             .Equal(x => x.Quantity * x.UnitPrice)
             .WithMessage("Line total must equal quantity * unit price");
+
+        RuleFor(x => x.ServiceId)
+            .MustAsync(async (serviceId, cancellation) =>
+            {
+                if (!serviceId.HasValue)
+                    return true; // ServiceId is optional
+
+                var serviceExists = await context.Services
+                    .AnyAsync(s => s.Id == serviceId.Value && s.IsActive, cancellation);
+                return serviceExists;
+            })
+            .When(x => x.ServiceId.HasValue)
+            .WithMessage("Service ID must reference an active service");
 
         RuleFor(x => x)
             .Must(x => x.ServiceId.HasValue || x.EquipmentId.HasValue || !string.IsNullOrWhiteSpace(x.Description))

@@ -1,4 +1,5 @@
 using FluentValidation;
+using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
@@ -8,7 +9,7 @@ namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
 /// </summary>
 public class CreateEstimateRequestValidator : AbstractValidator<CreateEstimateRequest>
 {
-    public CreateEstimateRequestValidator()
+    public CreateEstimateRequestValidator(ApplicationDbContext context)
     {
         RuleFor(x => x.Customer)
             .NotNull()
@@ -22,7 +23,7 @@ public class CreateEstimateRequestValidator : AbstractValidator<CreateEstimateRe
             .WithMessage("At least one line item is required");
 
         RuleForEach(x => x.LineItems)
-            .SetValidator(new EstimateLineItemDtoValidator());
+            .SetValidator(new EstimateLineItemDtoValidator(context));
 
         RuleFor(x => x.Notes)
             .MaximumLength(2000)

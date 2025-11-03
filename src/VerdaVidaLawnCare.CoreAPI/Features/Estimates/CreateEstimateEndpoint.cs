@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using VerdaVida.Shared.Common;
 using VerdaVida.Shared.EndPoints;
+using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
 using VerdaVidaLawnCare.CoreAPI.Services;
@@ -44,15 +45,18 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
     private readonly ILogger<SubmitEstimateCommandHandler> _logger;
     private readonly IEstimateService _estimateService;
     private readonly IPythonApiService _pythonApiService;
+    private readonly ApplicationDbContext _context;
 
     public SubmitEstimateCommandHandler(
         ILogger<SubmitEstimateCommandHandler> logger,
         IEstimateService estimateService,
-        IPythonApiService pythonApiService)
+        IPythonApiService pythonApiService,
+        ApplicationDbContext context)
     {
         _logger = logger;
         _estimateService = estimateService;
         _pythonApiService = pythonApiService;
+        _context = context;
     }
 
     public async Task<IResult> Handle(SubmitEstimateCommand command, CancellationToken cancellationToken)
@@ -65,10 +69,11 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
                 request.Customer.Email);
 
             // Validate the request using FluentValidation
-            if (!TryValidateRequest(request, out var validationErrors))
+            var (isValid, validationErrors) = await TryValidateRequestAsync(request, _context, cancellationToken);
+            if (!isValid)
             {
                 _logger.LogWarning("Validation failed for estimate creation request: {Errors}",
-                    string.Join(", ", validationErrors));
+                    string.Join(", ", validationErrors.Values.SelectMany(v => v)));
                 return Results.ValidationProblem(validationErrors);
             }
 
@@ -126,18 +131,22 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
     /// Validates the request using FluentValidation
     /// </summary>
     /// <param name="request">The request to validate</param>
-    /// <param name="errors">The validation errors if any</param>
-    /// <returns>True if valid, false otherwise</returns>
-    private static bool TryValidateRequest(CreateEstimateRequest request, out Dictionary<string, string[]> errors)
+    /// <param name="context">The database context</param>
+    /// <param name="cancellationToken">The cancellation token</param>
+    /// <returns>A tuple indicating if valid and any validation errors</returns>
+    private static async Task<(bool IsValid, Dictionary<string, string[]> Errors)> TryValidateRequestAsync(
+        CreateEstimateRequest request, 
+        ApplicationDbContext context, 
+        CancellationToken cancellationToken)
     {
-        errors = new Dictionary<string, string[]>();
+        var errors = new Dictionary<string, string[]>();
 
         // This is a simplified validation check
         // In a real implementation, you might want to use a validation service
         // or middleware that automatically handles FluentValidation
 
-        var validator = new CreateEstimateRequestValidator();
-        var validationResult = validator.Validate(request);
+        var validator = new CreateEstimateRequestValidator(context);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
 
         if (!validationResult.IsValid)
         {
@@ -147,9 +156,9 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
                     g => g.Key,
                     g => g.Select(e => e.ErrorMessage).ToArray()
                 );
-            return false;
+            return (false, errors);
         }
 
-        return true;
+        return (true, errors);
     }
 }
