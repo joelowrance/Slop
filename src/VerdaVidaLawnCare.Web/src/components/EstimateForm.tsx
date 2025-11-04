@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { ServiceDto } from '@/types/service';
+import { CustomerSearch } from '@/components/CustomerSearch';
+import type { CustomerSearchResult } from '@/types/customer';
 
 const validationSchema = Yup.object({
   customer: Yup.object({
@@ -176,8 +178,24 @@ export function EstimateForm() {
                 }
               };
 
+              const handleCustomerSelect = async (customer: CustomerSearchResult) => {
+                await setFieldValue('customer.firstName', customer.firstName);
+                await setFieldValue('customer.lastName', customer.lastName);
+                await setFieldValue('customer.email', customer.email);
+                await setFieldValue('customer.phone', customer.phone);
+                await setFieldValue('customer.address', customer.address);
+                await setFieldValue('customer.city', customer.city);
+                await setFieldValue('customer.state', customer.state);
+                await setFieldValue('customer.postalCode', customer.postalCode);
+              };
+
               return (
                 <Form className="space-y-6">
+                  {/* Customer Search */}
+                  <div className="pb-4 border-b border-slate-200">
+                    <CustomerSearch onSelectCustomer={handleCustomerSelect} />
+                  </div>
+
                   {/* Customer Information */}
                   <div>
                     <h2 className="text-xl font-semibold mb-4">Customer Information</h2>
