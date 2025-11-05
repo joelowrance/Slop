@@ -77,5 +77,6 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.9" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
+    <PackageVersion Include="Fluid.Core" Version="2.10.0" />
   </ItemGroup>
 </Project>

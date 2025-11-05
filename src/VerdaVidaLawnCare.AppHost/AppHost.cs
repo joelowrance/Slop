@@ -45,12 +45,16 @@ builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml
 
 
 // MailHog SMTP Server for email testing
-// var mailhog = builder.AddContainer("mailhog", "mailhog/mailhog")
-//     .WithHttpEndpoint(8025, 8025, name: "mailhog-ui")
-//     .WithEndpoint(1025, 1025, name: "smtp", scheme: "tcp")
-//     .WithEnvironment("MH_STORAGE", "maildir")
-//     .WithEnvironment("MH_MAILDIR_PATH", "/maildir");
+var mailHogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "VerdaVida", "MailHog");
+Directory.CreateDirectory(mailHogPath);
 
+var mailhog = builder.AddContainer("mailhog", "mailhog/mailhog")
+    .WithHttpEndpoint(8025, 8025, name: "mailhog-ui")
+    .WithEndpoint(1025, 1025, name: "smtp", scheme: "tcp")
+    .WithBindMount(@"c:\temp\VerdaViva\MailHog", "/maildir")
+    .WithEnvironment("MH_STORAGE", "maildir")
+    .WithEnvironment("MH_MAILDIR_PATH", "/maildir");
 var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 
 // add a python project

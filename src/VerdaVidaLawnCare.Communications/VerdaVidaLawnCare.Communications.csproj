@@ -14,10 +14,17 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.HealthChecks" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" />
+    <PackageReference Include="Fluid.Core" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VerdaVida.Shared\VerdaVida.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Templates\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

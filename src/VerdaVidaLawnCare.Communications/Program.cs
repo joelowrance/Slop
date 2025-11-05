@@ -2,11 +2,16 @@ using MassTransit;
 using Serilog;
 using VerdaVida.Shared.ProjectSetup;
 using VerdaVidaLawnCare.Communications.Consumers;
+using VerdaVidaLawnCare.Communications.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddCors();
 builder.Services.AddOpenApi();
+
+// Register email and template services
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ILiquidTemplateService, LiquidTemplateService>();
 
 // Only configure MassTransit when running in Aspire (when RabbitMQ connection string is available)
 if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("rabbitmq")))
@@ -14,6 +19,7 @@ if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("rabbitmq"))
     builder.Services.AddMassTransit(x =>
     {
         x.AddConsumer<CustomerCreatedEventConsumer>();
+        x.AddConsumer<EstimateSentEventConsumer>();
         x.SetKebabCaseEndpointNameFormatter();
         x.UsingRabbitMq((context, configuration) =>
         {

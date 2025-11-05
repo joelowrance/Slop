@@ -96,6 +96,7 @@ public class EstimateService : IEstimateService
                     estimateNumber, lineItems.Count);
 
                 // Return the created estimate
+                await SendEstimateAsync(estimate.Id);
                 return await GetEstimateResponseAsync(estimate.Id);
             }
             catch (Exception ex)
@@ -295,6 +296,104 @@ public class EstimateService : IEstimateService
         {
             _logger.LogError(ex, "Error retrieving estimate {EstimateId}", estimateId);
             return Result<EstimateResponse>.Failure("Error retrieving estimate details");
+        }
+    }
+
+    /// <summary>
+    /// Sends an estimate to the customer by updating its status to Sent and publishing an event
+    /// </summary>
+    public async Task<Result<EstimateResponse>> SendEstimateAsync(int estimateId)
+    {
+        try
+        {
+            _logger.LogInformation("Starting estimate send for EstimateId: {EstimateId}", estimateId);
+
+            var estimate = await _context.Estimates
+                .Include(e => e.Customer)
+                .Include(e => e.EstimateLineItems)
+                .FirstOrDefaultAsync(e => e.Id == estimateId);
+
+            if (estimate == null)
+            {
+                _logger.LogWarning("Estimate not found: {EstimateId}", estimateId);
+                return Result<EstimateResponse>.Failure("Estimate not found");
+            }
+
+            if (estimate.Status == EstimateStatus.Sent)
+            {
+                _logger.LogInformation("Estimate {EstimateId} is already sent", estimateId);
+                return await GetEstimateResponseAsync(estimateId);
+            }
+
+            if (estimate.Status != EstimateStatus.Draft)
+            {
+                _logger.LogWarning("Cannot send estimate {EstimateId} with status {Status}", estimateId, estimate.Status);
+                return Result<EstimateResponse>.Failure($"Cannot send estimate with status {estimate.Status}");
+            }
+
+            // Update status to Sent
+            estimate.Status = EstimateStatus.Sent;
+            estimate.UpdatedAt = DateTimeOffset.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated estimate {EstimateId} status to Sent", estimateId);
+
+            // Publish EstimateSentEvent
+            try
+            {
+                var lineItems = estimate.EstimateLineItems
+                    .Select(li => new EstimateLineItemEvent
+                    {
+                        Description = li.Description,
+                        Quantity = li.Quantity,
+                        UnitPrice = li.UnitPrice,
+                        LineTotal = li.LineTotal
+                    })
+                    .ToList();
+
+                var subtotal = lineItems.Sum(li => li.LineTotal);
+                var taxAmount = 0m; // No tax for now
+                var totalAmount = subtotal + taxAmount;
+
+                var estimateSentEvent = new EstimateSentEvent
+                {
+                    EstimateId = estimate.Id,
+                    EstimateNumber = estimate.EstimateNumber,
+                    CustomerId = estimate.CustomerId,
+                    CustomerFirstName = estimate.Customer.FirstName,
+                    CustomerLastName = estimate.Customer.LastName,
+                    CustomerEmail = estimate.Customer.Email,
+                    EstimateDate = estimate.EstimateDate,
+                    ExpirationDate = estimate.ExpirationDate,
+                    Notes = estimate.Notes,
+                    Terms = estimate.Terms,
+                    LineItems = lineItems,
+                    Subtotal = subtotal,
+                    TaxAmount = taxAmount,
+                    TotalAmount = totalAmount,
+                    SentAt = DateTimeOffset.UtcNow
+                };
+
+                await _publishEndpoint.Publish(estimateSentEvent);
+                _logger.LogInformation("Published EstimateSentEvent for estimate {EstimateId}", estimate.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the estimate send operation
+                _logger.LogWarning(ex, "Failed to publish EstimateSentEvent for estimate {EstimateId}", estimate.Id);
+            }
+
+            return await GetEstimateResponseAsync(estimate.Id);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while sending estimate {EstimateId}", estimateId);
+            return Result<EstimateResponse>.Failure("A database error occurred while sending the estimate");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while sending estimate {EstimateId}", estimateId);
+            return Result<EstimateResponse>.Failure("An unexpected error occurred while sending the estimate");
         }
     }
 }
