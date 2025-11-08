@@ -10,4 +10,7 @@
     <Project Path="src/VerdaVidaLawnCare.CoreAPI/VerdaVidaLawnCare.CoreAPI.csproj" />
     <Project Path="src/VerdaVidaLawnCare.Communications/VerdaVidaLawnCare.Communications.csproj" />
   </Folder>
+  <Folder Name="Tests">
+    <Project Path="src/VerdaVidaLawnCare.Communications.UnitTests/VerdaVidaLawnCare.Communications.UnitTests.csproj" />
+  </Folder>
 </Solution>
