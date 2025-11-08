@@ -6,3 +6,4 @@ export interface ServiceDto {
   serviceType: number;
 }
 
+

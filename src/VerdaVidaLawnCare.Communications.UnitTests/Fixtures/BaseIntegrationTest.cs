@@ -17,3 +17,4 @@ public abstract class BaseIntegrationTest : IClassFixture<RabbitMqFixture>, ICla
     }
 }
 
+

@@ -59,7 +59,7 @@ var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 
 // add a python project
 #pragma warning disable ASPIREHOSTINGPYTHON001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-var pythonApi = builder.AddDockerfile("pytest", "../PythonTest", "Dockerfile")
+var pythonApi = builder.AddDockerfile("WeatherApp", "../VerdeVida.Weather", "Dockerfile")
     .WithHttpEndpoint(port: 8080, targetPort: 80)
     .WithExternalHttpEndpoints();
 #pragma warning restore ASPIREHOSTINGPYTHON001
@@ -83,7 +83,7 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
     .PublishAsDockerFile();
 
-// builder.AddPythonApp("python", "../PythonTest", "app.py");
+// builder.AddPythonApp("python", "../VerdeVida.Weather", "app.py");
 // var pythonapp = builder.AddPythonApp("instrumented-python-app", "../InstrumentedPythonProject", "app.py")
 //     .WithHttpEndpoint(env: "PORT")
 //     .WithEnvironment("DEBUG", "True")
