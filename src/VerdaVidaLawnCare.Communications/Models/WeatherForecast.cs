@@ -88,6 +88,6 @@ public class DailyForecast
     /// <summary>
     /// Gets a value indicating whether this day is considered "sunny" (Clear condition)
     /// </summary>
-    public bool IsSunny => Condition.Equals("Clear", StringComparison.OrdinalIgnoreCase);
+    public bool IsSunny => string.Equals(Condition, "Clear", StringComparison.OrdinalIgnoreCase);
 }
 
