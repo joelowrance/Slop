@@ -1,10 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using VerdaVida.Shared.Common;
 using VerdaVida.Shared.EndPoints;
-using VerdaVidaLawnCare.CoreAPI.Data;
+using VerdaVida.Shared.MediatrPipelines;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
-using VerdaVidaLawnCare.CoreAPI.Features.Estimates.Validators;
 using VerdaVidaLawnCare.CoreAPI.Services;
 
 namespace VerdaVidaLawnCare.CoreAPI.Features.Estimates;
@@ -45,18 +43,15 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
     private readonly ILogger<SubmitEstimateCommandHandler> _logger;
     private readonly IEstimateService _estimateService;
     private readonly IPythonApiService _pythonApiService;
-    private readonly ApplicationDbContext _context;
 
     public SubmitEstimateCommandHandler(
         ILogger<SubmitEstimateCommandHandler> logger,
         IEstimateService estimateService,
-        IPythonApiService pythonApiService,
-        ApplicationDbContext context)
+        IPythonApiService pythonApiService)
     {
         _logger = logger;
         _estimateService = estimateService;
         _pythonApiService = pythonApiService;
-        _context = context;
     }
 
     public async Task<IResult> Handle(SubmitEstimateCommand command, CancellationToken cancellationToken)
@@ -67,15 +62,6 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
         {
             _logger.LogInformation("Received request to create estimate for customer {CustomerEmail}",
                 request.Customer.Email);
-
-            // Validate the request using FluentValidation
-            var (isValid, validationErrors) = await TryValidateRequestAsync(request, _context, cancellationToken);
-            if (!isValid)
-            {
-                _logger.LogWarning("Validation failed for estimate creation request: {Errors}",
-                    string.Join(", ", validationErrors.Values.SelectMany(v => v)));
-                return Results.ValidationProblem(validationErrors);
-            }
 
             // Create the estimate
             var result = await _estimateService.CreateEstimateAsync(request);
@@ -108,12 +94,21 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
         }
         catch (ValidationException ex)
         {
-            _logger.LogWarning(ex, "Validation error in estimate creation: {Error}", ex.Message);
-            return Results.Problem(
-                detail: ex.Message,
-                statusCode: 400,
-                title: "Validation error"
-            );
+            _logger.LogWarning(ex, "Validation failed for estimate creation: {Errors}",
+                string.Join("; ", ex.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+
+            // Convert ValidationException to ValidationProblemDetails format
+            // Strip "Request." prefix from property names since the API accepts CreateEstimateRequest directly
+            var validationErrors = ex.Errors
+                .GroupBy(e => e.PropertyName.StartsWith("Request.", StringComparison.Ordinal)
+                    ? e.PropertyName["Request.".Length..]
+                    : e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            return Results.ValidationProblem(validationErrors);
         }
         catch (Exception ex)
         {
@@ -125,40 +120,5 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
                 title: "Internal server error"
             );
         }
-    }
-
-    /// <summary>
-    /// Validates the request using FluentValidation
-    /// </summary>
-    /// <param name="request">The request to validate</param>
-    /// <param name="context">The database context</param>
-    /// <param name="cancellationToken">The cancellation token</param>
-    /// <returns>A tuple indicating if valid and any validation errors</returns>
-    private static async Task<(bool IsValid, Dictionary<string, string[]> Errors)> TryValidateRequestAsync(
-        CreateEstimateRequest request, 
-        ApplicationDbContext context, 
-        CancellationToken cancellationToken)
-    {
-        var errors = new Dictionary<string, string[]>();
-
-        // This is a simplified validation check
-        // In a real implementation, you might want to use a validation service
-        // or middleware that automatically handles FluentValidation
-
-        var validator = new CreateEstimateRequestValidator(context);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray()
-                );
-            return (false, errors);
-        }
-
-        return (true, errors);
     }
 }
