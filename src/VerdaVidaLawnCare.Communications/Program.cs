@@ -13,6 +13,17 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ILiquidTemplateService, LiquidTemplateService>();
 
+// Register weather service
+// Service discovery will automatically resolve "WeatherApp" when running in Aspire
+// Fallback to localhost for standalone development
+builder.Services.AddHttpClient<IWeatherService, WeatherService>((_, client) =>
+{
+    // Aspire service discovery will resolve "WeatherApp" automatically via AddServiceDefaults()
+    // For standalone development, fallback to localhost
+    client.BaseAddress = new Uri("http://WeatherApp");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Only configure MassTransit when running in Aspire (when RabbitMQ connection string is available)
 if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("rabbitmq")))
 {

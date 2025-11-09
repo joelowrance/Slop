@@ -36,6 +36,11 @@ public record EstimateSentEvent
     public string CustomerEmail { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the customer's postal code (zip code)
+    /// </summary>
+    public string CustomerPostalCode { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the estimate date
     /// </summary>
     public DateTimeOffset EstimateDate { get; init; }

@@ -363,6 +363,7 @@ public class EstimateService : IEstimateService
                     CustomerFirstName = estimate.Customer.FirstName,
                     CustomerLastName = estimate.Customer.LastName,
                     CustomerEmail = estimate.Customer.Email,
+                    CustomerPostalCode = estimate.Customer.PostalCode,
                     EstimateDate = estimate.EstimateDate,
                     ExpirationDate = estimate.ExpirationDate,
                     Notes = estimate.Notes,
