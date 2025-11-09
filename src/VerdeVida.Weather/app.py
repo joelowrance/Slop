@@ -9,19 +9,34 @@ from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 app = flask.Flask(__name__)
 
-trace.set_tracer_provider(TracerProvider())
-otlpExporter = OTLPSpanExporter()
+# Initialize logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configure OpenTelemetry with service name
+resource = Resource.create({
+    "service.name": "Python Weather API"
+})
+trace.set_tracer_provider(TracerProvider(resource=resource))
+
+# Get OTLP endpoint from environment variable (set by Aspire)
+otlp_endpoint = os.environ.get('OTEL_EXPORTER_OTLP_ENDPOINT')
+if otlp_endpoint:
+    logger.info(f"Configuring OTLP exporter to send to: {otlp_endpoint}")
+    otlpExporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+else:
+    logger.warning("OTEL_EXPORTER_OTLP_ENDPOINT not set, using default localhost:4317")
+    otlpExporter = OTLPSpanExporter()
+
 processor = BatchSpanProcessor(otlpExporter)
 trace.get_tracer_provider().add_span_processor(processor)
 
 FlaskInstrumentor().instrument_app(app)
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @app.route('/', methods=['GET'])
 def hello_world():

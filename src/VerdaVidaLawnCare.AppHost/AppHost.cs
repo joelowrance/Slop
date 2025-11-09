@@ -35,7 +35,7 @@ var test2 =
 
 //var test = prometheus.GetEndpoint("http");
 
-builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml")
+var otelCollector = builder.AddOpenTelemetryCollector("otelcollector", "../otelcollector/config.yaml")
     .WithEnvironment("PROMETHEUS_ENDPOINT",
         ReferenceExpression.Create($"{prometheus.GetEndpoint("http").Property(EndpointProperty.Url)}/api/v1/otlp"))
     .WithEnvironment("JAEGER_ENDPOINT",
@@ -62,7 +62,9 @@ var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 var pythonApi = builder.AddDockerfile("WeatherApp", "../VerdeVida.Weather", "Dockerfile")
     .WithHttpEndpoint(port: 8080, targetPort: 80)
     .WithExternalHttpEndpoints()
-    .WithEnvironment("OPENWEATHERMAP_API_KEY", "6095c5f7fe5d2c0daa714497367ec04a");
+    .WithEnvironment("OPENWEATHERMAP_API_KEY", "6095c5f7fe5d2c0daa714497367ec04a")
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT",
+        ReferenceExpression.Create($"{otelCollector.GetEndpoint("grpc").Property(EndpointProperty.Url)}"));
 #pragma warning restore ASPIREHOSTINGPYTHON001
 
 // Add service projects
