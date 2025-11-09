@@ -16,32 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Configure HttpClient for Python API service
-builder.Services.AddHttpClient<IPythonApiService, PythonApiService>((serviceProvider, client) =>
+builder.Services.AddHttpClient<IPythonApiService, PythonApiService>((_, client) =>
 {
-    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    
-    // When using .WithReference(pythonApi.GetEndpoint("http")) in AppHost,
-    // Aspire injects the endpoint URL into configuration.
-    // The configuration is accessible via the endpoint reference.
-    // Try multiple possible configuration key patterns that Aspire might use:
-    var endpointUrl = configuration["Services__pytest__http__0"] 
-                   ?? configuration["Services__pytest__http"] 
-                   ?? configuration.GetConnectionString("pytest")
-                   ?? configuration["ConnectionStrings:pytest"];
-    
-    if (!string.IsNullOrEmpty(endpointUrl))
-    {
-        // Use the URL from configuration (supports both http:// and https://)
-        client.BaseAddress = new Uri(endpointUrl);
-    }
-    else
-    {
-        // Fallback: Use service discovery by service name
-        // The AddServiceDiscovery() call in AddServiceDefaults() will resolve "pytest"
-        // at runtime. This approach supports HTTP by default.
-        // For HTTPS, the endpoint URL should be injected via .WithReference()
-        client.BaseAddress = new Uri("http://pytest");
-    }
+    client.BaseAddress = new Uri("http://WeatherApp");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 // Configure CORS for React app

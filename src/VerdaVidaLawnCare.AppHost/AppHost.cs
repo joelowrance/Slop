@@ -62,7 +62,7 @@ var coreApiDatabase = postgres.AddDatabase("verdevida-connection", "verdevida");
 var pythonApi = builder.AddDockerfile("WeatherApp", "../VerdeVida.Weather", "Dockerfile")
     .WithHttpEndpoint(port: 8080, targetPort: 80)
     .WithExternalHttpEndpoints()
-    .WithEnvironment("OPENWEATHERMAP_API_KEY", "6095c5f7fe5d2c0daa714497367ec04a")
+    .WithEnvironment("OPENWEATHERMAP_API_KEY", "6095c5f7fe5d2c0daa714497367ec04a");
 #pragma warning restore ASPIREHOSTINGPYTHON001
 
 // Add service projects

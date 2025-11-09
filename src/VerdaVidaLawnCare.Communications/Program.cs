@@ -16,7 +16,7 @@ builder.Services.AddScoped<ILiquidTemplateService, LiquidTemplateService>();
 // Register weather service
 // Service discovery will automatically resolve "WeatherApp" when running in Aspire
 // Fallback to localhost for standalone development
-builder.Services.AddHttpClient<IWeatherService, WeatherService>((serviceProvider, client) =>
+builder.Services.AddHttpClient<IWeatherService, WeatherService>((_, client) =>
 {
     // Aspire service discovery will resolve "WeatherApp" automatically via AddServiceDefaults()
     // For standalone development, fallback to localhost
