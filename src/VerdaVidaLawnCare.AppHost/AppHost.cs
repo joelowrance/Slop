@@ -64,7 +64,8 @@ var pythonApi = builder.AddDockerfile("WeatherApp", "../VerdeVida.Weather", "Doc
     .WithExternalHttpEndpoints()
     .WithEnvironment("OPENWEATHERMAP_API_KEY", "6095c5f7fe5d2c0daa714497367ec04a")
     .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT",
-        ReferenceExpression.Create($"{otelCollector.GetEndpoint("grpc").Property(EndpointProperty.Url)}"));
+        ReferenceExpression.Create($"{otelCollector.GetEndpoint("grpc").Property(EndpointProperty.Url)}"))
+    .WithEnvironment("OTEL_SERVICE_NAME", "Python Weather API");
 #pragma warning restore ASPIREHOSTINGPYTHON001
 
 // Add service projects

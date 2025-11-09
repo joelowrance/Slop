@@ -1,5 +1,6 @@
 using MassTransit;
 using Serilog;
+using Serilog.Context;
 using VerdaVida.Shared.ProjectSetup;
 using VerdaVidaLawnCare.Communications.Consumers;
 using VerdaVidaLawnCare.Communications.Services;
@@ -44,6 +45,9 @@ if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("rabbitmq"))
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("ServiceName", "VerdaVidaLawnCare.Communications")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .Enrich.WithProperty("Application", "VerdaVidaLawnCare.Communications")
     .WriteTo.OpenTelemetry()
     .CreateLogger();
 
@@ -67,17 +71,22 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 // Add correlation ID middleware
-app.Use(async (context, next) =>
-{
-    context.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId);
-    if (string.IsNullOrEmpty(correlationId))
-    {
-        correlationId = Guid.NewGuid().ToString();
-        context.Request.Headers["X-Correlation-ID"] = correlationId;
-    }
-    context.Response.Headers["X-Correlation-ID"] = correlationId;
-    await next();
-});
+// app.Use(async (context, next) =>
+// {
+//     context.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId);
+//     if (string.IsNullOrEmpty(correlationId))
+//     {
+//         correlationId = Guid.NewGuid().ToString();
+//         context.Request.Headers["X-Correlation-ID"] = correlationId;
+//     }
+//     context.Response.Headers["X-Correlation-ID"] = correlationId;
+//
+//     // Push correlation ID into Serilog LogContext for structured logging
+//     using (LogContext.PushProperty("CorrelationId", correlationId))
+//     {
+//         await next();
+//     }
+// });
 
 app.UseAuthorization();
 

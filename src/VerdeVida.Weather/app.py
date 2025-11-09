@@ -6,47 +6,90 @@ import re
 import requests
 from datetime import datetime
 from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 app = flask.Flask(__name__)
 
-# Initialize logging first
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Configure OpenTelemetry with service name
-resource = Resource.create({
-    "service.name": "Python Weather API"
+# Use environment variable if set, otherwise use default
+service_name = os.environ.get("OTEL_SERVICE_NAME", "Python Weather API")
+resource = Resource.create(attributes={
+    "service.name": service_name,
+    "service.version": "1.0.0"
 })
-trace.set_tracer_provider(TracerProvider(resource=resource))
+
+# Configure OpenTelemetry Tracing
+tracer_provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(tracer_provider)
 
 # Get OTLP endpoint from environment variable (set by Aspire)
 otlp_endpoint = os.environ.get('OTEL_EXPORTER_OTLP_ENDPOINT')
 if otlp_endpoint:
-    logger.info(f"Configuring OTLP exporter to send to: {otlp_endpoint}")
     otlpExporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
 else:
-    logger.warning("OTEL_EXPORTER_OTLP_ENDPOINT not set, using default localhost:4317")
     otlpExporter = OTLPSpanExporter()
 
 processor = BatchSpanProcessor(otlpExporter)
-trace.get_tracer_provider().add_span_processor(processor)
+tracer_provider.add_span_processor(processor)
+
+# Configure OpenTelemetry Logging
+logger_provider = LoggerProvider(resource=resource)
+set_logger_provider(logger_provider)
+
+if otlp_endpoint:
+    log_exporter = OTLPLogExporter(endpoint=otlp_endpoint, insecure=True)
+else:
+    log_exporter = OTLPLogExporter()
+
+logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+
+# Set up structured logging with OpenTelemetry
+handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.addHandler(handler)
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
+
+if otlp_endpoint:
+    logger.info("Configuring OTLP exporter", extra={
+        "otlp_endpoint": otlp_endpoint,
+        "service": "Python Weather API"
+    })
+else:
+    logger.warning("OTEL_EXPORTER_OTLP_ENDPOINT not set, using default localhost:4317", extra={
+        "service": "Python Weather API"
+    })
 
 FlaskInstrumentor().instrument_app(app)
 
 @app.route('/', methods=['GET'])
 def hello_world():
-    logger.info("request received!")
+    logger.info("Request received", extra={
+        "route": "/",
+        "method": "GET",
+        "service": "Python Weather API"
+    })
     return 'Hello, World!'
 
 @app.route('/python', methods=['GET'])
 def python():
-    logger.info("request received!")
-
+    logger.info("Request received", extra={
+        "route": "/python",
+        "method": "GET",
+        "service": "Python Weather API"
+    })
     return f"Python version: {sys.version}"
 
 @app.route('/forecast/<zip_code>', methods=['GET'])
@@ -63,11 +106,22 @@ def forecast(zip_code):
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("forecast") as span:
         span.set_attribute("zip_code", zip_code)
-        logger.info(f"Forecast request received for zip code: {zip_code}")
+        logger.info("Forecast request received", extra={
+            "zip_code": zip_code,
+            "route": "/forecast/<zip_code>",
+            "method": "GET",
+            "service": "Python Weather API"
+        })
 
         # Validate zip code format (5 digits)
         if not re.match(r'^\d{5}$', zip_code):
-            logger.warning(f"Invalid zip code format: {zip_code}")
+            logger.warning("Invalid zip code format", extra={
+                "zip_code": zip_code,
+                "route": "/forecast/<zip_code>",
+                "method": "GET",
+                "service": "Python Weather API",
+                "error_type": "validation_error"
+            })
             return flask.jsonify({
                 'error': 'Invalid zip code format. Please provide a 5-digit US zip code.'
             }), 400
@@ -75,7 +129,13 @@ def forecast(zip_code):
         # Get API key from environment
         api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
         if not api_key:
-            logger.error("WEATHER_API_KEY environment variable is not set")
+            logger.error("Weather API key not configured", extra={
+                "zip_code": zip_code,
+                "route": "/forecast/<zip_code>",
+                "method": "GET",
+                "service": "Python Weather API",
+                "error_type": "configuration_error"
+            })
             return flask.jsonify({
                 'error': 'Weather API key is not configured. Please set WEATHER_API_KEY environment variable.'
             }), 500
@@ -89,7 +149,13 @@ def forecast(zip_code):
             'units': 'imperial'  # This gives us Fahrenheit directly
         }
 
-        logger.info(f"Calling OpenWeatherMap API for zip code: {zip_code}")
+        logger.info("Calling OpenWeatherMap API", extra={
+            "zip_code": zip_code,
+            "route": "/forecast/<zip_code>",
+            "method": "GET",
+            "service": "Python Weather API",
+            "external_api": "OpenWeatherMap"
+        })
 
         try:
             response = requests.get(base_url, params=params, timeout=10)
@@ -100,41 +166,93 @@ def forecast(zip_code):
             # OpenWeatherMap returns 3-hourly forecasts, we need to aggregate to daily
             # and limit to 10 days
             daily_forecasts = _aggregate_to_daily_forecast(data, limit=10)
+            location = data.get('city', {}).get('name', 'Unknown')
+            country = data.get('city', {}).get('country', 'US')
 
-            logger.info(f"Successfully retrieved forecast for zip code: {zip_code}")
+            logger.info("Successfully retrieved forecast", extra={
+                "zip_code": zip_code,
+                "location": location,
+                "country": country,
+                "forecast_days": len(daily_forecasts),
+                "route": "/forecast/<zip_code>",
+                "method": "GET",
+                "service": "Python Weather API",
+                "external_api": "OpenWeatherMap"
+            })
 
             return flask.jsonify({
                 'zip_code': zip_code,
-                'location': data.get('city', {}).get('name', 'Unknown'),
-                'country': data.get('city', {}).get('country', 'US'),
+                'location': location,
+                'country': country,
                 'forecast': daily_forecasts
             }), 200
 
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout calling OpenWeatherMap API for zip code: {zip_code}")
+            logger.error("Timeout calling OpenWeatherMap API", extra={
+                "zip_code": zip_code,
+                "route": "/forecast/<zip_code>",
+                "method": "GET",
+                "service": "Python Weather API",
+                "external_api": "OpenWeatherMap",
+                "error_type": "timeout",
+                "timeout_seconds": 10
+            })
             return flask.jsonify({
                 'error': 'Weather service request timed out. Please try again later.'
             }), 503
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                logger.error("Invalid API key for OpenWeatherMap")
+            status_code = e.response.status_code if e.response else 0
+            if status_code == 401:
+                logger.error("Invalid API key for OpenWeatherMap", extra={
+                    "zip_code": zip_code,
+                    "route": "/forecast/<zip_code>",
+                    "method": "GET",
+                    "service": "Python Weather API",
+                    "external_api": "OpenWeatherMap",
+                    "error_type": "authentication_error",
+                    "http_status_code": status_code
+                })
                 return flask.jsonify({
                     'error': 'Invalid weather API key configuration.'
                 }), 500
-            elif e.response.status_code == 404:
-                logger.warning(f"Zip code not found: {zip_code}")
+            elif status_code == 404:
+                logger.warning("Zip code not found in OpenWeatherMap", extra={
+                    "zip_code": zip_code,
+                    "route": "/forecast/<zip_code>",
+                    "method": "GET",
+                    "service": "Python Weather API",
+                    "external_api": "OpenWeatherMap",
+                    "error_type": "not_found",
+                    "http_status_code": status_code
+                })
                 return flask.jsonify({
                     'error': f'Weather data not found for zip code: {zip_code}'
                 }), 404
             else:
-                logger.error(f"HTTP error calling OpenWeatherMap API: {e.response.status_code}")
+                logger.error("HTTP error calling OpenWeatherMap API", extra={
+                    "zip_code": zip_code,
+                    "route": "/forecast/<zip_code>",
+                    "method": "GET",
+                    "service": "Python Weather API",
+                    "external_api": "OpenWeatherMap",
+                    "error_type": "http_error",
+                    "http_status_code": status_code
+                })
                 return flask.jsonify({
                     'error': 'Weather service is currently unavailable. Please try again later.'
                 }), 503
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error calling OpenWeatherMap API: {str(e)}")
+            logger.error("Error calling OpenWeatherMap API", extra={
+                "zip_code": zip_code,
+                "route": "/forecast/<zip_code>",
+                "method": "GET",
+                "service": "Python Weather API",
+                "external_api": "OpenWeatherMap",
+                "error_type": "request_exception",
+                "error_message": str(e)
+            })
             return flask.jsonify({
                 'error': 'Unable to connect to weather service. Please try again later.'
             }), 503
