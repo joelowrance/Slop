@@ -1,6 +1,7 @@
 using Fluid;
 using VerdaVida.Shared.Common;
 using VerdaVida.Shared.Events;
+using VerdaVidaLawnCare.Communications.Models;
 
 namespace VerdaVidaLawnCare.Communications.Services;
 
@@ -62,6 +63,11 @@ public class LiquidTemplateService : ILiquidTemplateService
             // This allows Fluid to access properties when iterating over collections
             templateContext.Options.MemberAccessStrategy.Register<EstimateLineItemEvent>();
             templateContext.Options.MemberAccessStrategy.Register<EstimateSentEvent>();
+            
+            // Register weather forecast types for template access
+            templateContext.Options.MemberAccessStrategy.Register<EstimateEmailModel>();
+            templateContext.Options.MemberAccessStrategy.Register<WeatherForecastResponse>();
+            templateContext.Options.MemberAccessStrategy.Register<DailyForecast>();
             
             // Add common filters and helpers if needed
             // templateContext.Options.Filters.AddFilter("formatDate", FormatDate);

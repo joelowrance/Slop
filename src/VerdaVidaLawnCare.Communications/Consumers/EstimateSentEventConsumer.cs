@@ -1,5 +1,6 @@
 using MassTransit;
 using VerdaVida.Shared.Events;
+using VerdaVidaLawnCare.Communications.Models;
 using VerdaVidaLawnCare.Communications.Services;
 
 namespace VerdaVidaLawnCare.Communications.Consumers;
@@ -11,15 +12,18 @@ public class EstimateSentEventConsumer : IConsumer<EstimateSentEvent>
 {
     private readonly IEmailService _emailService;
     private readonly ILiquidTemplateService _templateService;
+    private readonly IWeatherService _weatherService;
     private readonly ILogger<EstimateSentEventConsumer> _logger;
 
     public EstimateSentEventConsumer(
         IEmailService emailService,
         ILiquidTemplateService templateService,
+        IWeatherService weatherService,
         ILogger<EstimateSentEventConsumer> logger)
     {
         _emailService = emailService;
         _templateService = templateService;
+        _weatherService = weatherService;
         _logger = logger;
     }
 
@@ -40,8 +44,47 @@ public class EstimateSentEventConsumer : IConsumer<EstimateSentEvent>
                 estimate.EstimateNumber,
                 estimate.CustomerEmail);
 
+            // Fetch weather forecast if postal code is available
+            WeatherForecastResponse? weatherForecast = null;
+            if (!string.IsNullOrWhiteSpace(estimate.CustomerPostalCode))
+            {
+                _logger.LogInformation(
+                    "Fetching weather forecast for zip code: {ZipCode}",
+                    estimate.CustomerPostalCode);
+
+                var weatherResult = await _weatherService.GetForecastAsync(estimate.CustomerPostalCode);
+                if (weatherResult.IsSuccess)
+                {
+                    weatherForecast = weatherResult.Value;
+                    _logger.LogInformation(
+                        "Successfully fetched weather forecast for zip code: {ZipCode}, Location: {Location}",
+                        estimate.CustomerPostalCode,
+                        weatherForecast.Location);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to fetch weather forecast for zip code: {ZipCode}. Error: {Error}. Continuing with email send.",
+                        estimate.CustomerPostalCode,
+                        weatherResult.Error);
+                }
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Customer postal code is missing for EstimateId: {EstimateId}. Skipping weather forecast.",
+                    estimate.EstimateId);
+            }
+
+            // Create email model with estimate and weather data
+            var emailModel = new EstimateEmailModel
+            {
+                Estimate = estimate,
+                Weather = weatherForecast
+            };
+
             // Render the email template
-            var renderResult = await _templateService.RenderTemplateAsync("EstimateEmail", estimate);
+            var renderResult = await _templateService.RenderTemplateAsync("EstimateEmail", emailModel);
             
             if (!renderResult.IsSuccess)
             {

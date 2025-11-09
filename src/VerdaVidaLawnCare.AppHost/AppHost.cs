@@ -82,6 +82,7 @@ builder.AddProject<Projects.VerdaVidaLawnCare_Communications>("communications")
     .WaitFor(grafana)
     .WaitFor(jaeger)
     .WithEnvironment("PROMETHEUS_ENDPOINT", test2)
+    .WithReference(pythonApi.GetEndpoint("http"))
     .PublishAsDockerFile();
 
 // builder.AddPythonApp("python", "../VerdeVida.Weather", "app.py");
