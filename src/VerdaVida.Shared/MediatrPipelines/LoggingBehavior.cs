@@ -57,6 +57,13 @@ public class LoggingBehavior<TRequest, TResponse>(
         }
         catch (ValidationException validationEx)
         {
+            // Don't catch ValidationException for IResult responses - let ValidationExceptionBehavior handle it
+            // This allows ValidationExceptionBehavior to convert it to ValidationProblemDetails before it bubbles up
+            if (typeof(Microsoft.AspNetCore.Http.IResult).IsAssignableFrom(typeof(TResponse)))
+            {
+                throw;
+            }
+            
             exception = validationEx;
             logger.LogWarning(
                 validationEx,

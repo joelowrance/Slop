@@ -96,7 +96,7 @@ export function EstimateForm() {
     return quantity * unitPrice;
   };
 
-  const handleSubmit = async (values: typeof initialValues) => {
+  const handleSubmit = async (values: typeof initialValues, formikHelpers: any) => {
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -125,8 +125,66 @@ export function EstimateForm() {
         window.location.reload();
       }, 2000);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'An error occurred';
-      setSubmitError(errorMessage);
+      // Check if this is a validation error response (400 with errors property)
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const formikErrors: Record<string, string> = {};
+
+        // Map API validation errors to Formik field paths
+        Object.keys(validationErrors).forEach((apiField) => {
+          const errorMessages = validationErrors[apiField];
+          if (Array.isArray(errorMessages) && errorMessages.length > 0) {
+            // Convert API field names to Formik field paths
+            // Examples:
+            // "Customer.FirstName" -> "customer.firstName"
+            // "Customer.Email" -> "customer.email"
+            // "LineItems[0].Description" -> "lineItems.0.description"
+            // "LineItems[0].Quantity" -> "lineItems.0.quantity"
+            
+            let formikField = apiField;
+            
+            // Helper function to convert PascalCase to camelCase
+            const toCamelCase = (str: string) => {
+              return str.charAt(0).toLowerCase() + str.substring(1);
+            };
+            
+            // Handle Customer.* fields (e.g., "Customer.FirstName", "Customer.Email")
+            if (formikField.startsWith('Customer.')) {
+              const customerField = formikField.substring('Customer.'.length);
+              formikField = `customer.${toCamelCase(customerField)}`;
+            }
+            // Handle LineItems[*].* fields (e.g., "LineItems[0].Description", "LineItems[0].Quantity")
+            else if (formikField.startsWith('LineItems[')) {
+              const match = formikField.match(/^LineItems\[(\d+)\]\.(.+)$/);
+              if (match) {
+                const index = match[1];
+                const field = match[2];
+                formikField = `lineItems.${index}.${toCamelCase(field)}`;
+              }
+            }
+            // Handle top-level fields (Notes, Terms, ExpirationDate)
+            else {
+              formikField = toCamelCase(formikField);
+            }
+
+            // Set the first error message for this field
+            formikErrors[formikField] = errorMessages[0];
+          }
+        });
+
+        // Set errors on the form
+        if (Object.keys(formikErrors).length > 0) {
+          formikHelpers.setErrors(formikErrors);
+          setSubmitError('Please correct the validation errors below.');
+        } else {
+          const errorMessage = error.response?.data?.detail || error.message || 'An error occurred';
+          setSubmitError(errorMessage);
+        }
+      } else {
+        // Non-validation error
+        const errorMessage = error.response?.data?.detail || error.message || 'An error occurred';
+        setSubmitError(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
