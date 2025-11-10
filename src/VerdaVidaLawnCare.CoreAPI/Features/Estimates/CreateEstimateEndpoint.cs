@@ -20,9 +20,7 @@ public class CreateEstimateEndpoint : IEndpoint
     {
         app.MapPost("/api/estimates", async (IMediator m, CreateEstimateRequest request) =>
             {
-                var result = await m.Send(new SubmitEstimateCommand(request));
-                 return result;
-                //return await m.Send(new SubmitEstimateCommand(request));
+                return await m.Send(new SubmitEstimateCommand(request));
             })
             .WithName("CreateEstimate")
             .WithSummary("Create a new estimate")
@@ -58,67 +56,36 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
     {
         var request = command.Request;
 
-        try
+        _logger.LogInformation("Received request to create estimate for customer {CustomerEmail}",
+            request.Customer.Email);
+
+        // Create the estimate
+        var result = await _estimateService.CreateEstimateAsync(request);
+
+        // Call python api
+        var pyVersion = await _pythonApiService.GetPythonVersionAsync(cancellationToken);
+
+        if (!result.IsSuccess)
         {
-            _logger.LogInformation("Received request to create estimate for customer {CustomerEmail}",
-                request.Customer.Email);
-
-            // Create the estimate
-            var result = await _estimateService.CreateEstimateAsync(request);
-
-            // Call python api
-            var pyVersion = await _pythonApiService.GetPythonVersionAsync(cancellationToken);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("Failed to create estimate: {Error}", result.Error);
-                return Results.Problem(
-                    detail: result.Error,
-                    statusCode: 400,
-                    title: "Failed to create estimate"
-                );
-            }
-
-            _logger.LogInformation("Successfully created estimate {EstimateNumber} with ID {EstimateId}",
-                result.Value.EstimateNumber, result.Value.Id);
-
-            // Return 201 Created with location header
-            return Results.CreatedAtRoute(
-                "GetEstimate",
-                new
-                {
-                    id = result.Value.Id,
-                    version = pyVersion
-                },
-                result.Value);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning(ex, "Validation failed for estimate creation: {Errors}",
-                string.Join("; ", ex.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
-
-            // Convert ValidationException to ValidationProblemDetails format
-            // Strip "Request." prefix from property names since the API accepts CreateEstimateRequest directly
-            var validationErrors = ex.Errors
-                .GroupBy(e => e.PropertyName.StartsWith("Request.", StringComparison.Ordinal)
-                    ? e.PropertyName["Request.".Length..]
-                    : e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray()
-                );
-
-            return Results.ValidationProblem(validationErrors);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error creating estimate for customer {CustomerEmail}",
-                request.Customer.Email);
+            _logger.LogWarning("Failed to create estimate: {Error}", result.Error);
             return Results.Problem(
-                detail: "An unexpected error occurred while creating the estimate",
-                statusCode: 500,
-                title: "Internal server error"
+                detail: result.Error,
+                statusCode: 400,
+                title: "Failed to create estimate"
             );
         }
+
+        _logger.LogInformation("Successfully created estimate {EstimateNumber} with ID {EstimateId}",
+            result.Value.EstimateNumber, result.Value.Id);
+
+        // Return 201 Created with location header
+        return Results.CreatedAtRoute(
+            "GetEstimate",
+            new
+            {
+                id = result.Value.Id,
+                version = pyVersion
+            },
+            result.Value);
     }
 }

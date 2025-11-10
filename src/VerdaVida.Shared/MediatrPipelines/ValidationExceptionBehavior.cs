@@ -21,6 +21,12 @@ public class ValidationExceptionBehavior<TRequest, TResponse>(
         }
         catch (ValidationException ex)
         {
+            logger.LogInformation(
+                "ValidationExceptionBehavior caught ValidationException for {RequestName}. TResponse type: {ResponseType}, IsIResult: {IsIResult}",
+                typeof(TRequest).Name,
+                typeof(TResponse).FullName,
+                typeof(IResult).IsAssignableFrom(typeof(TResponse)));
+
             // Only handle ValidationException for IResult responses
             if (typeof(IResult).IsAssignableFrom(typeof(TResponse)))
             {
@@ -42,9 +48,11 @@ public class ValidationExceptionBehavior<TRequest, TResponse>(
                     );
 
                 var result = Results.ValidationProblem(validationErrors);
+                logger.LogInformation("ValidationExceptionBehavior converting to ValidationProblemDetails with {ErrorCount} error groups", validationErrors.Count);
                 return (TResponse)(object)result;
             }
 
+            logger.LogInformation("ValidationExceptionBehavior re-throwing ValidationException for non-IResult response type");
             // For non-IResult responses, re-throw the exception
             throw;
         }

@@ -61,6 +61,9 @@ public class LoggingBehavior<TRequest, TResponse>(
             // This allows ValidationExceptionBehavior to convert it to ValidationProblemDetails before it bubbles up
             if (typeof(Microsoft.AspNetCore.Http.IResult).IsAssignableFrom(typeof(TResponse)))
             {
+                logger.LogInformation(
+                    "LoggingBehavior: Re-throwing ValidationException for IResult response type {ResponseType}",
+                    typeof(TResponse).FullName);
                 throw;
             }
             
