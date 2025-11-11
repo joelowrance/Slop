@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using VerdaVida.Shared.Common;
 using VerdaVida.Shared.Events;
+using VerdaVida.Shared.OpenTelemetry;
 using VerdaVidaLawnCare.CoreAPI.Data;
 using VerdaVidaLawnCare.CoreAPI.Features.Estimates.DTOs;
 using VerdaVidaLawnCare.CoreAPI.Models;
@@ -16,12 +17,18 @@ public class EstimateService : IEstimateService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<EstimateService> _logger;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly BusinessMetrics _businessMetrics;
 
-    public EstimateService(ApplicationDbContext context, ILogger<EstimateService> logger, IPublishEndpoint publishEndpoint)
+    public EstimateService(
+        ApplicationDbContext context, 
+        ILogger<EstimateService> logger, 
+        IPublishEndpoint publishEndpoint,
+        BusinessMetrics businessMetrics)
     {
         _context = context;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
+        _businessMetrics = businessMetrics;
     }
 
     /// <summary>
@@ -94,6 +101,11 @@ public class EstimateService : IEstimateService
 
                 _logger.LogInformation("Successfully created estimate {EstimateNumber} with {LineItemCount} line items",
                     estimateNumber, lineItems.Count);
+
+                // Record metrics
+                _businessMetrics.RecordEstimateReceived();
+                var totalAmount = lineItems.Sum(li => li.LineTotal);
+                _businessMetrics.RecordDollarValueBooked(totalAmount);
 
                 // Return the created estimate
                 await SendEstimateAsync(estimate.Id);

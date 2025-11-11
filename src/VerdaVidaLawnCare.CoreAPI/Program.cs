@@ -77,6 +77,7 @@ builder.Services.AddTransient<CustomerDataSeeder>();
 builder.Services.AddSingleton<IActivityScope, ActivityScope>();
 builder.Services.AddSingleton<CommandHandlerMetrics>();
 builder.Services.AddSingleton<QueryHandlerMetrics>();
+builder.Services.AddSingleton<BusinessMetrics>();
 
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

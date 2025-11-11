@@ -54,20 +54,38 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
 
     public async Task<IResult> Handle(SubmitEstimateCommand command, CancellationToken cancellationToken)
     {
+        var startTime = DateTime.UtcNow;
         var request = command.Request;
 
-        _logger.LogInformation("Received request to create estimate for customer {CustomerEmail}",
-            request.Customer.Email);
+        _logger.LogInformation(
+            "Starting estimate submission process for customer {CustomerEmail} with {LineItemCount} line items",
+            request.Customer.Email,
+            request.LineItems?.Count ?? 0);
 
         // Create the estimate
+        _logger.LogInformation("Calling EstimateService to create estimate for customer {CustomerEmail}",
+            request.Customer.Email);
+        
         var result = await _estimateService.CreateEstimateAsync(request);
 
         // Call python api
+        _logger.LogInformation("Calling Python API to get version information");
+        var pyVersionStartTime = DateTime.UtcNow;
         var pyVersion = await _pythonApiService.GetPythonVersionAsync(cancellationToken);
+        var pyVersionDuration = (DateTime.UtcNow - pyVersionStartTime).TotalMilliseconds;
+        _logger.LogInformation(
+            "Python API version call completed in {Duration}ms. Version: {Version}",
+            pyVersionDuration,
+            pyVersion);
 
         if (!result.IsSuccess)
         {
-            _logger.LogWarning("Failed to create estimate: {Error}", result.Error);
+            var totalDuration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogWarning(
+                "Estimate creation failed after {Duration}ms for customer {CustomerEmail}. Error: {Error}",
+                totalDuration,
+                request.Customer.Email,
+                result.Error);
             return Results.Problem(
                 detail: result.Error,
                 statusCode: 400,
@@ -75,8 +93,13 @@ public class SubmitEstimateCommandHandler : IRequestHandler<SubmitEstimateComman
             );
         }
 
-        _logger.LogInformation("Successfully created estimate {EstimateNumber} with ID {EstimateId}",
-            result.Value.EstimateNumber, result.Value.Id);
+        var totalDurationSuccess = (DateTime.UtcNow - startTime).TotalMilliseconds;
+        _logger.LogInformation(
+            "Successfully completed estimate submission in {Duration}ms. EstimateNumber: {EstimateNumber}, EstimateId: {EstimateId}, TotalAmount: {TotalAmount}",
+            totalDurationSuccess,
+            result.Value.EstimateNumber,
+            result.Value.Id,
+            result.Value.TotalAmount);
 
         // Return 201 Created with location header
         return Results.CreatedAtRoute(

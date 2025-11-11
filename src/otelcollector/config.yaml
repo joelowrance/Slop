@@ -8,6 +8,14 @@ receivers:
 
 processors:
   batch:
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: development
+        action: upsert
+      - key: service.namespace
+        value: verda-vida
+        action: upsert
 
 exporters:
   debug:
@@ -38,7 +46,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [resource, batch]
       exporters: [otlp/aspire, otlphttp/jaeger, otlphttp/newrelic]
     logs:
       receivers: [otlp]

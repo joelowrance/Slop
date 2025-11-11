@@ -28,4 +28,11 @@ public static class TelemetryTags
     {
         public const string Validation = $"{ActivitySourceProvider.DefaultSourceName}.validator";
     }
+
+    public static class Estimates
+    {
+        public const string EstimatesMeter = $"{ActivitySourceProvider.DefaultSourceName}.estimates";
+        public const string EstimatesReceived = $"{EstimatesMeter}.received.total";
+        public const string DollarValueBooked = $"{EstimatesMeter}.booked.dollar_value";
+    }
 }
