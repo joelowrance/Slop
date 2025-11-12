@@ -1,6 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
+    "VerdaVidaLawnCare.AppHost": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:17172;http://localhost:15149",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21011",
+        "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22196"
+      }
+    },
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,
