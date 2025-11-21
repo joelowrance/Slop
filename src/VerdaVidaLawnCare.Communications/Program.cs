@@ -119,7 +119,6 @@ app.MapGet("/api/test", (ILogger<Program> logger) =>
 
     return Results.Ok(result);
 })
-.WithName("TestEndpoint")
-.WithOpenApi();
+.WithName("TestEndpoint");
 
 app.Run();

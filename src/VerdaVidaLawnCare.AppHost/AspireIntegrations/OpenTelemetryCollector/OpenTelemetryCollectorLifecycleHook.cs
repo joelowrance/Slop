@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,45 +9,54 @@ namespace VerdaVidaLawnCare.AppHost.AspireIntegrations.OpenTelemetryCollector;
 
 //Based on source from https://github.com/practical-otel/opentelemetry-aspire-collector by @martinjt.
 //stolen wholesale from https://github.com/dotnet/aspire-samples/blob/main/samples/Metrics/MetricsApp.AppHost/OpenTelemetryCollector/
-internal sealed class OpenTelemetryCollectorLifecycleHook : IDistributedApplicationLifecycleHook
+internal static class OpenTelemetryCollectorLifecycleHook
 {
     private const string OtelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
-    private readonly ILogger<OpenTelemetryCollectorLifecycleHook> _logger;
-
-    public OpenTelemetryCollectorLifecycleHook(ILogger<OpenTelemetryCollectorLifecycleHook> logger)
+    public static Task AfterEndpointsAllocatedAsync(ResourceEndpointsAllocatedEvent evt, CancellationToken cancellationToken)
     {
-        _logger = logger;
-    }
+        var logger = evt.Services.GetRequiredService<ResourceLoggerService>().GetLogger(evt.Resource);
+        
+        // Skip if this is the collector resource itself
+        if (evt.Resource is OpenTelemetryCollectorResource)
+        {
+            return Task.CompletedTask;
+        }
 
-    public Task AfterEndpointsAllocatedAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
-    {
+        // We need to find the collector from the distributed application
+        // Since ResourceEndpointsAllocatedEvent doesn't have ApplicationModel, we'll use a different approach
+        // Store collector reference when it's created, or find it via the services
+        var appModel = evt.Services.GetRequiredService<DistributedApplicationModel>();
         var collectorResource = appModel.Resources.OfType<OpenTelemetryCollectorResource>().FirstOrDefault();
         if (collectorResource == null)
         {
-            _logger.LogWarning($"No {nameof(OpenTelemetryCollectorResource)} resource found.");
+            logger.LogDebug($"No {nameof(OpenTelemetryCollectorResource)} resource found, skipping telemetry configuration.");
             return Task.CompletedTask;
         }
 
         var endpoint = collectorResource.GetEndpoint(OpenTelemetryCollectorResource.OtlpGrpcEndpointName);
         if (!endpoint.Exists)
         {
-            _logger.LogWarning($"No {OpenTelemetryCollectorResource.OtlpGrpcEndpointName} endpoint for the collector.");
+            logger.LogDebug($"No {OpenTelemetryCollectorResource.OtlpGrpcEndpointName} endpoint for the collector, skipping telemetry configuration.");
             return Task.CompletedTask;
         }
 
-        foreach (var resource in appModel.Resources)
+        // Check if we've already added our callback
+        var existingCallbacks = evt.Resource.Annotations.OfType<EnvironmentCallbackAnnotation>().ToList();
+        if (existingCallbacks.Any())
         {
-            resource.Annotations.Add(new EnvironmentCallbackAnnotation((EnvironmentCallbackContext context) =>
-            {
-                if (context.EnvironmentVariables.ContainsKey(OtelExporterOtlpEndpoint))
-                {
-                    _logger.LogDebug("Forwarding telemetry for {ResourceName} to the collector.", resource.Name);
-
-                    context.EnvironmentVariables[OtelExporterOtlpEndpoint] = endpoint;
-                }
-            }));
+            return Task.CompletedTask;
         }
+
+        evt.Resource.Annotations.Add(new EnvironmentCallbackAnnotation((EnvironmentCallbackContext context) =>
+        {
+            if (context.EnvironmentVariables.ContainsKey(OtelExporterOtlpEndpoint))
+            {
+                logger.LogDebug("Forwarding telemetry for {ResourceName} to the collector.", evt.Resource.Name);
+
+                context.EnvironmentVariables[OtelExporterOtlpEndpoint] = endpoint;
+            }
+        }));
 
         return Task.CompletedTask;
     }
@@ -108,7 +117,8 @@ internal static class OpenTelemetryCollectorServiceExtensions
 {
     public static IDistributedApplicationBuilder AddOpenTelemetryCollectorInfrastructure(this IDistributedApplicationBuilder builder)
     {
-        builder.Services.TryAddLifecycleHook<OpenTelemetryCollectorLifecycleHook>();
+        builder.Eventing.Subscribe<ResourceEndpointsAllocatedEvent>(async (evt, ct) => 
+            await OpenTelemetryCollectorLifecycleHook.AfterEndpointsAllocatedAsync(evt, ct));
 
         return builder;
     }

@@ -194,8 +194,7 @@ app.MapGet("/api/test", async (ApplicationDbContext dbContext, ILogger<Program> 
         return Results.Problem("Internal server error occurred during test");
     }
 })
-.WithName("TestEndpoint")
-.WithOpenApi();
+.WithName("TestEndpoint");
 
 // Add Python API test endpoint
 app.MapGet("/api/python-test", async (IPythonApiService pythonApiService, ILogger<Program> logger) =>
@@ -241,8 +240,7 @@ app.MapGet("/api/python-test", async (IPythonApiService pythonApiService, ILogge
         return Results.Problem("Internal server error occurred during Python API test");
     }
 })
-.WithName("PythonApiTestEndpoint")
-.WithOpenApi();
+.WithName("PythonApiTestEndpoint");
 
 // Ensure database is migrated to the latest version
 // using (var scope = app.Services.CreateScope())
