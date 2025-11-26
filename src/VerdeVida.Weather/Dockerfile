@@ -32,8 +32,15 @@
 
 FROM python:3.12.11-slim AS base
 
-# Set the working directory, the app files could be bind-mounted here
+# Set the working directory
 WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOST=0.0.0.0
 
 # Copy the requirements file
 COPY requirements.txt .
@@ -41,8 +48,12 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure the server is accessible from outside the container
-ENV HOST=0.0.0.0
+# Copy application files
+COPY app.py .
+COPY gunicorn_config.py .
+
+# Expose port 80
+EXPOSE 80
 
 # Set the entry point to run the application 
 ENTRYPOINT ["opentelemetry-instrument", \
@@ -52,8 +63,4 @@ ENTRYPOINT ["opentelemetry-instrument", \
     "gunicorn", "--config", "gunicorn_config.py", "app:app"]
 
 CMD []
-
-FROM base AS publish
-
-COPY . .
 
