@@ -21,4 +21,19 @@ public interface IEstimateService
     /// <param name="estimateId">The estimate identifier</param>
     /// <returns>A result containing the updated estimate details or an error message</returns>
     Task<Result<EstimateResponse>> SendEstimateAsync(int estimateId);
+
+    /// <summary>
+    /// Marks a job (estimate) as completed
+    /// </summary>
+    /// <param name="estimateId">The estimate identifier</param>
+    /// <param name="completionNotes">Notes about the job completion</param>
+    /// <returns>A result containing the updated estimate details or an error message</returns>
+    Task<Result<EstimateResponse>> CompleteJobAsync(int estimateId, string completionNotes);
+
+    /// <summary>
+    /// Gets a filtered list of jobs (estimates excluding cancelled)
+    /// </summary>
+    /// <param name="request">Filter parameters</param>
+    /// <returns>A result containing the list of jobs or an error message</returns>
+    Task<Result<List<EstimateResponse>>> GetJobsAsync(GetJobsRequest request);
 }

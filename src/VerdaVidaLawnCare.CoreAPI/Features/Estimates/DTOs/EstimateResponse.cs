@@ -46,6 +46,21 @@ public class EstimateResponse
     public string Terms { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the scheduled date for the job
+    /// </summary>
+    public DateTimeOffset? ScheduledDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date when the job was completed
+    /// </summary>
+    public DateTimeOffset? CompletedDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets notes entered when completing the job
+    /// </summary>
+    public string CompletionNotes { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the estimate line items
     /// </summary>
     public List<EstimateLineItemDto> LineItems { get; set; } = new();

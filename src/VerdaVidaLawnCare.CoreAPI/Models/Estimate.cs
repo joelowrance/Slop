@@ -15,7 +15,8 @@ public enum EstimateStatus
     Accepted = 4,
     Rejected = 5,
     Expired = 6,
-    Cancelled = 7
+    Cancelled = 7,
+    Completed = 8
 }
 
 /// <summary>
@@ -62,6 +63,21 @@ public class Estimate : IAuditable
     /// Gets or sets the terms and conditions
     /// </summary>
     public string Terms { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the scheduled date for the job
+    /// </summary>
+    public DateTimeOffset? ScheduledDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date when the job was completed
+    /// </summary>
+    public DateTimeOffset? CompletedDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets notes entered when completing the job
+    /// </summary>
+    public string CompletionNotes { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the date and time when the record was created
@@ -120,6 +136,9 @@ public class EstimateConfiguration : IEntityTypeConfiguration<Estimate>
         builder.Property(e => e.Terms)
             .HasMaxLength(2000);
 
+        builder.Property(e => e.CompletionNotes)
+            .HasMaxLength(2000);
+
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
@@ -135,6 +154,12 @@ public class EstimateConfiguration : IEntityTypeConfiguration<Estimate>
 
         // Create index on Status for filtering
         builder.HasIndex(e => e.Status);
+
+        // Create index on ScheduledDate for filtering
+        builder.HasIndex(e => e.ScheduledDate);
+
+        // Create index on CompletedDate for filtering
+        builder.HasIndex(e => e.CompletedDate);
 
         // Configure relationship with Customer
         builder.HasOne(e => e.Customer)

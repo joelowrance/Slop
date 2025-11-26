@@ -49,6 +49,9 @@ export interface EstimateResponse {
   status: string;
   notes?: string;
   terms?: string;
+  scheduledDate?: string;
+  completedDate?: string;
+  completionNotes?: string;
   lineItems: EstimateLineItemDto[];
   subtotal: number;
   taxAmount: number;
@@ -57,4 +60,8 @@ export interface EstimateResponse {
   isExpired: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CompleteJobRequest {
+  completionNotes: string;
 }

@@ -1,0 +1,222 @@
+### Test Jobs API Endpoints
+### This file tests the job completion and jobs listing endpoints
+
+@baseUrl = http://localhost:5000
+@contentType = application/json
+
+### Variables for testing
+@estimateId = 1
+@customerId = 1
+
+###############################################################################
+### GET JOBS ENDPOINTS
+###############################################################################
+
+### Test 1: Get all jobs (estimates excluding cancelled)
+GET {{baseUrl}}/api/jobs
+Content-Type: {{contentType}}
+
+###
+
+### Test 2: Get only open jobs (not completed)
+GET {{baseUrl}}/api/jobs?status=open
+Content-Type: {{contentType}}
+
+###
+
+### Test 3: Get only completed jobs
+GET {{baseUrl}}/api/jobs?status=completed
+Content-Type: {{contentType}}
+
+###
+
+### Test 4: Get all jobs (explicit)
+GET {{baseUrl}}/api/jobs?status=all
+Content-Type: {{contentType}}
+
+###
+
+### Test 5: Search jobs by customer name
+GET {{baseUrl}}/api/jobs?search=John
+Content-Type: {{contentType}}
+
+###
+
+### Test 6: Search jobs by customer email
+GET {{baseUrl}}/api/jobs?search=john@example.com
+Content-Type: {{contentType}}
+
+###
+
+### Test 7: Get jobs for specific customer
+GET {{baseUrl}}/api/jobs?customerId={{customerId}}
+Content-Type: {{contentType}}
+
+###
+
+### Test 8: Combined filters - open jobs for specific customer
+GET {{baseUrl}}/api/jobs?status=open&customerId={{customerId}}
+Content-Type: {{contentType}}
+
+###
+
+### Test 9: Combined filters - search with status filter
+GET {{baseUrl}}/api/jobs?status=completed&search=smith
+Content-Type: {{contentType}}
+
+###
+
+###############################################################################
+### COMPLETE JOB ENDPOINTS
+###############################################################################
+
+### Test 10: Complete a job with notes
+POST {{baseUrl}}/api/jobs/{{estimateId}}/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "Job completed successfully. Lawn mowed, edges trimmed, and debris removed. Customer was very satisfied with the service."
+}
+
+###
+
+### Test 11: Complete a job without notes
+POST {{baseUrl}}/api/jobs/{{estimateId}}/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": ""
+}
+
+###
+
+### Test 12: Try to complete a non-existent job (should return 400)
+POST {{baseUrl}}/api/jobs/99999/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "This should fail - job doesn't exist"
+}
+
+###
+
+### Test 13: Try to complete a job that's not in Accepted status (should return 400)
+# Note: Change the estimateId to a job with Draft/Sent/Viewed status
+POST {{baseUrl}}/api/jobs/2/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "This should fail if job is not Accepted"
+}
+
+###
+
+###############################################################################
+### WORKFLOW TESTS - Complete flow from estimate to completed job
+###############################################################################
+
+### Step 1: Create a new estimate
+# @name createEstimate
+POST {{baseUrl}}/api/estimates
+Content-Type: {{contentType}}
+
+{
+  "customer": {
+    "firstName": "Sarah",
+    "lastName": "Johnson",
+    "email": "sarah.johnson@example.com",
+    "phone": "555-0199",
+    "address": "789 Oak Street",
+    "city": "Springfield",
+    "state": "IL",
+    "postalCode": "62701"
+  },
+  "expirationDate": "2025-12-31T23:59:59Z",
+  "notes": "Customer requested weekly service starting next month",
+  "terms": "Payment due upon completion",
+  "lineItems": [
+    {
+      "description": "Lawn mowing and edging",
+      "quantity": 1,
+      "unitPrice": 45.00
+    },
+    {
+      "description": "Leaf removal",
+      "quantity": 1,
+      "unitPrice": 35.00
+    }
+  ]
+}
+
+###
+
+### Step 2: Get the created estimate ID from the response above
+# Manually update @newEstimateId with the id from the response
+@newEstimateId = 1
+
+###
+
+### Step 3: Check if the new estimate appears in the jobs list
+GET {{baseUrl}}/api/jobs?status=all
+Content-Type: {{contentType}}
+
+###
+
+### Step 4: (Manual step - would need to update estimate to Accepted status)
+# Note: You'll need to create an endpoint or manually update the DB to set status to Accepted
+# before completing the job
+
+###
+
+### Step 5: Complete the job
+POST {{baseUrl}}/api/jobs/{{newEstimateId}}/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "Job completed on schedule. Both lawn mowing and leaf removal finished. Customer requested to add fertilization service next time."
+}
+
+###
+
+### Step 6: Verify the job now shows as completed
+GET {{baseUrl}}/api/jobs?status=completed
+Content-Type: {{contentType}}
+
+###
+
+### Step 7: Get specific completed job details
+GET {{baseUrl}}/api/estimates/{{newEstimateId}}
+Content-Type: {{contentType}}
+
+###
+
+###############################################################################
+### ERROR HANDLING TESTS
+###############################################################################
+
+### Test with invalid estimate ID format (should return 400)
+POST {{baseUrl}}/api/jobs/abc/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "This should fail due to invalid ID format"
+}
+
+###
+
+### Test with missing request body (should return 400)
+POST {{baseUrl}}/api/jobs/1/complete
+Content-Type: {{contentType}}
+
+###
+
+### Test with very long completion notes (testing max length handling)
+POST {{baseUrl}}/api/jobs/1/complete
+Content-Type: {{contentType}}
+
+{
+  "completionNotes": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+}
+
+###
+

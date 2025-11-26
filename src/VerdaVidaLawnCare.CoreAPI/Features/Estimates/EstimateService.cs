@@ -409,4 +409,181 @@ public class EstimateService : IEstimateService
             return Result<EstimateResponse>.Failure("An unexpected error occurred while sending the estimate");
         }
     }
+
+    /// <summary>
+    /// Marks a job (estimate) as completed
+    /// </summary>
+    /// <param name="estimateId">The estimate identifier</param>
+    /// <param name="completionNotes">Notes about the job completion</param>
+    /// <returns>A result containing the updated estimate details or an error message</returns>
+    public async Task<Result<EstimateResponse>> CompleteJobAsync(int estimateId, string completionNotes)
+    {
+        try
+        {
+            _logger.LogInformation("Starting job completion for EstimateId: {EstimateId}", estimateId);
+
+            var estimate = await _context.Estimates
+                .Include(e => e.Customer)
+                .Include(e => e.EstimateLineItems)
+                .FirstOrDefaultAsync(e => e.Id == estimateId);
+
+            if (estimate == null)
+            {
+                _logger.LogWarning("Estimate not found: {EstimateId}", estimateId);
+                return Result<EstimateResponse>.Failure("Estimate not found");
+            }
+
+            if (estimate.Status == EstimateStatus.Completed)
+            {
+                _logger.LogInformation("Estimate {EstimateId} is already completed", estimateId);
+                return await GetEstimateResponseAsync(estimateId);
+            }
+
+            // Can complete jobs that are Sent, Viewed, or Accepted
+            // Cannot complete Draft, Rejected, Expired, or Cancelled estimates
+            if (estimate.Status != EstimateStatus.Accepted && 
+                estimate.Status != EstimateStatus.Sent && 
+                estimate.Status != EstimateStatus.Viewed)
+            {
+                _logger.LogWarning("Cannot complete estimate {EstimateId} with status {Status}", estimateId, estimate.Status);
+                return Result<EstimateResponse>.Failure($"Cannot complete estimate with status {estimate.Status}. Only Sent, Viewed, or Accepted estimates can be completed.");
+            }
+
+            // Update to Completed status
+            estimate.Status = EstimateStatus.Completed;
+            estimate.CompletedDate = DateTimeOffset.UtcNow;
+            estimate.CompletionNotes = completionNotes;
+            estimate.UpdatedAt = DateTimeOffset.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Completed estimate {EstimateId}", estimateId);
+
+            return await GetEstimateResponseAsync(estimate.Id);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while completing estimate {EstimateId}", estimateId);
+            return Result<EstimateResponse>.Failure("A database error occurred while completing the job");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while completing estimate {EstimateId}", estimateId);
+            return Result<EstimateResponse>.Failure("An unexpected error occurred while completing the job");
+        }
+    }
+
+    /// <summary>
+    /// Gets a filtered list of jobs (estimates excluding cancelled)
+    /// </summary>
+    /// <param name="request">Filter parameters</param>
+    /// <returns>A result containing the list of jobs or an error message</returns>
+    public async Task<Result<List<EstimateResponse>>> GetJobsAsync(GetJobsRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Getting jobs list with filters - Status: {Status}, Search: {Search}", 
+                request.Status, request.Search);
+
+            var query = _context.Estimates
+                .Include(e => e.Customer)
+                .Include(e => e.EstimateLineItems)
+                .ThenInclude(eli => eli.Service)
+                .Include(e => e.EstimateLineItems)
+                .ThenInclude(eli => eli.Equipment)
+                .Where(e => e.Status != EstimateStatus.Cancelled); // Exclude cancelled estimates
+
+            // Apply status filter
+            if (!string.IsNullOrWhiteSpace(request.Status))
+            {
+                switch (request.Status.ToLower())
+                {
+                    case "open":
+                        query = query.Where(e => e.Status != EstimateStatus.Completed);
+                        break;
+                    case "completed":
+                        query = query.Where(e => e.Status == EstimateStatus.Completed);
+                        break;
+                }
+            }
+
+            // Apply customer ID filter
+            if (request.CustomerId.HasValue)
+            {
+                query = query.Where(e => e.CustomerId == request.CustomerId.Value);
+            }
+
+            // Apply customer search filter
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var searchTerm = request.Search.ToLower();
+                query = query.Where(e => 
+                    e.Customer.FirstName.ToLower().Contains(searchTerm) ||
+                    e.Customer.LastName.ToLower().Contains(searchTerm) ||
+                    e.Customer.Email.ToLower().Contains(searchTerm) ||
+                    e.EstimateNumber.ToLower().Contains(searchTerm));
+            }
+
+            // Order by scheduled date (if set), then by estimate date descending
+            query = query.OrderByDescending(e => e.ScheduledDate ?? e.EstimateDate);
+
+            var estimates = await query.ToListAsync();
+
+            _logger.LogInformation("Found {Count} jobs", estimates.Count);
+
+            var response = estimates.Select(estimate => new EstimateResponse
+            {
+                Id = estimate.Id,
+                EstimateNumber = estimate.EstimateNumber,
+                Customer = new CustomerDto
+                {
+                    Id = estimate.Customer.Id,
+                    FirstName = estimate.Customer.FirstName,
+                    LastName = estimate.Customer.LastName,
+                    Email = estimate.Customer.Email,
+                    Phone = estimate.Customer.Phone,
+                    FullAddress = $"{estimate.Customer.Address}, {estimate.Customer.City}, {estimate.Customer.State} {estimate.Customer.PostalCode}",
+                    City = estimate.Customer.City,
+                    State = estimate.Customer.State,
+                    PostalCode = estimate.Customer.PostalCode
+                },
+                EstimateDate = estimate.EstimateDate,
+                ExpirationDate = estimate.ExpirationDate,
+                Status = estimate.Status.ToString(),
+                Notes = estimate.Notes,
+                Terms = estimate.Terms,
+                ScheduledDate = estimate.ScheduledDate,
+                CompletedDate = estimate.CompletedDate,
+                CompletionNotes = estimate.CompletionNotes,
+                LineItems = estimate.EstimateLineItems
+                    .OrderBy(eli => eli.Id)
+                    .Select(eli => new EstimateLineItemDto
+                    {
+                        ServiceId = eli.ServiceId,
+                        EquipmentId = eli.EquipmentId,
+                        Description = eli.Description,
+                        Quantity = eli.Quantity,
+                        UnitPrice = eli.UnitPrice,
+                        LineTotal = eli.LineTotal,
+                        ServiceName = eli.Service?.Name,
+                        EquipmentName = eli.Equipment?.Name
+                    })
+                    .ToList(),
+                Subtotal = estimate.EstimateLineItems.Sum(eli => eli.LineTotal),
+                TaxAmount = 0, // No tax for now
+                TotalAmount = estimate.EstimateLineItems.Sum(eli => eli.LineTotal),
+                CreatedAt = estimate.CreatedAt,
+                UpdatedAt = estimate.UpdatedAt,
+                DaysUntilExpiration = (int)(estimate.ExpirationDate - DateTimeOffset.UtcNow).TotalDays,
+                IsExpired = estimate.ExpirationDate < DateTimeOffset.UtcNow
+            }).ToList();
+
+            return Result<List<EstimateResponse>>.Success(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving jobs list");
+            return Result<List<EstimateResponse>>.Failure("An error occurred while retrieving jobs");
+        }
+    }
 }
